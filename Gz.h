@@ -39,14 +39,32 @@
 #define GZ_FLAT			0	/* do flat shading with GZ_RBG_COLOR */
 #define	GZ_COLOR		1	/* interpolate vertex color */
 #define	GZ_NORMALS		2	/* interpolate normals */
-typedef struct GzPoint {
-	float x, y, z;
-}GzPoint;
+typedef struct Vertex
+{
+    double position[3];
+    double color_diffuse[3];
+    double color_specular[3];
+    double normal[3];
+    double shininess;
+}Vertex;
 
+typedef struct Triangle
+{
+    Vertex v[3];
+}GzTriangle;
 
-typedef struct GzTriangle {
-	GzPoint v1, v2, v3;
-};
+typedef struct Sphere
+{
+    double position[3];
+    double color_diffuse[3];
+    double color_specular[3];
+    double shininess;
+    double radius;
+}GzSphere;
+typedef struct Light {
+    double position[3];
+    double color[3];
+}GzLight;
 typedef int     GzToken;
 typedef void    *GzPointer;
 typedef float   GzColor[3];
