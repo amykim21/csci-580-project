@@ -121,7 +121,6 @@ int GzRender::GzTrxMat(GzCoord translate, GzMatrix mat)
 	return GZ_SUCCESS;
 }
 
-
 int GzRender::GzScaleMat(GzCoord scale, GzMatrix mat)
 {
 	/* HW 3.5
@@ -137,7 +136,6 @@ int GzRender::GzScaleMat(GzCoord scale, GzMatrix mat)
 
 	return GZ_SUCCESS;
 }
-
 
 GzRender::GzRender(int xRes, int yRes)
 {
@@ -212,7 +210,7 @@ VectorCoord normalize(GzCoord v) {
 	};
 	return result;
 }
-// dotº¯ÊýÓÃÓÚ¼ÆËãÁ½¸öÏòÁ¿µÄµã»ý
+// dotï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½ï¿½
 float dot(VectorCoord v1, VectorCoord v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
@@ -231,7 +229,7 @@ VectorCoord multiply(float v1, VectorCoord v2) {
 	return result;
 }
 
-// crossº¯ÊýÓÃÓÚ¼ÆËãÁ½¸öÏòÁ¿µÄ²æ»ý
+// crossï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½
 VectorCoord cross(VectorCoord v1, VectorCoord v2) {
 	VectorCoord result = {
 		v1[1] * v2[2] - v1[2] * v2[1],
@@ -249,7 +247,7 @@ VectorCoord decreaseCoord(VectorCoord v1, VectorCoord v2) {
 	};
 	return result;
 }
-// ¾ØÕóÏà³Ë
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 VectorMatrix multiplyMatrix(VectorMatrix m1, VectorMatrix m2) {
 	VectorMatrix result(4, std::vector<float>(4, 0));
 	for (int i = 0; i < 4; ++i) {
@@ -273,7 +271,7 @@ int GzRender::GzBeginRender()
 
 	VectorCoord camDir, camRight, camUp;
 
-	// ¼ÆËãCameraµÄÏòÁ¿
+	// ï¿½ï¿½ï¿½ï¿½Cameraï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 	VectorCoord vecLookAt(m_camera.lookat, m_camera.lookat + sizeof m_camera.lookat / sizeof m_camera.lookat[0]);
 	VectorCoord vecPosition(m_camera.position, m_camera.position + sizeof m_camera.position / sizeof m_camera.position[0]);
@@ -282,7 +280,7 @@ int GzRender::GzBeginRender()
 	camRight = normalize(cross(vecWorldup, camDir));
 	camUp = normalize(decreaseCoord(vecWorldup, multiply(dot(vecWorldup, camDir), camDir)));
 
-	// ¼ÆËã Xiw
+	// ï¿½ï¿½ï¿½ï¿½ Xiw
 	float XiwData0[4][4] = {
 		{camRight[X], camRight[Y], camRight[Z],0},
 		{camUp[X], camUp[Y], camUp[Z], 0},
@@ -304,7 +302,7 @@ int GzRender::GzBeginRender()
 	//	}
 	//}
 
-	// ¼ÆËã Xpi
+	// ï¿½ï¿½ï¿½ï¿½ Xpi
 	float d = tan((m_camera.FOV / 2) * (PI / 180));
 	float XpiData[4][4] = {
 		{1, 0, 0, 0},
@@ -318,7 +316,7 @@ int GzRender::GzBeginRender()
 	//		Xpi[i][j] = XpiData[i][j];
 	//	}
 	//}
-	// ¼ÆËã Xsp
+	// ï¿½ï¿½ï¿½ï¿½ Xsp
 	float XspData[4][4] = {
 		{xres * 0.5, 0, 0, xres * 0.5},
 		{0, -yres * 0.5, 0, yres * 0.5},
@@ -336,10 +334,10 @@ int GzRender::GzBeginRender()
 	//		Xsp0[i][j] = XspData[i][j];
 	//	}
 	//}
-	// ¼ÆËã Xsw
+	// ï¿½ï¿½ï¿½ï¿½ Xsw
 	//VectorMatrix Xsw = multiplyMatrix(multiplyMatrix(Xsp0, Xpi), Xiw);
 
-	// ²»ÂÛºÎÊ± Xsw ×ÜÊÇÔÚ stack µÄµ×²¿
+	// ï¿½ï¿½ï¿½Ûºï¿½Ê± Xsw ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ stack ï¿½Äµ×²ï¿½
 	matlevel = -1;
 	//GzMatrix floatXsw = {
 	//	{Xsw[0][0],Xsw[0][1],Xsw[0][2],Xsw[0][3]},
@@ -583,7 +581,7 @@ int GzRender::GzPutAttribute(int numAttributes, GzToken* nameList, GzPointer* va
 			GzTexture sp = (GzTexture)valueList[i];
 			this->tex_fun = sp;
 			break;
-		}							// ÔÚ´Ë´¦»¹¿ÉÒÔÌí¼Ó¸ü¶àÊôÐÔÉèÖÃ´úÂë
+		}							// ï¿½Ú´Ë´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½
 		}
 	}
 	return GZ_SUCCESS;
@@ -625,6 +623,58 @@ VectorCoord interpolateTextureColor(VectorCoord v1, VectorCoord v2, float t)
 
 	return result;
 }
+
+VectorCoord emitLight(VectorCoord startPoint, VectorCoord direction, int depth) {
+    VectorCoord normDirection = normalize(direction);
+
+    // find intersections with triangles and spheres
+    int intersectedTriangle = -1;
+    for (int i = 0; i < MAX_TRIANGLES; i++) {
+        if (CollisionWithTriangles(startPoint, normDirection, triangles[i])) {
+            intersectedTriangle = i;
+        }
+    }
+
+    for (int i = 0; i < numlights; i++) {
+
+    }
+
+    // if miss
+    if ((intersectedTriangle == -1) /* || (depth > MAX_DEPTH_LIMIT)*/) {
+        VectorCoord black(3, 0);
+        return black;
+    }
+
+    GzColor finalColor = { 0, 0, 0 };
+
+    GzVertex intersection;
+    intersection.position[0] = ;
+    intersection.position[1] = ;
+    intersection.position[2] = ;
+    intersection.color_diffuse[0] = ;
+    intersection.color_diffuse[1] = ;
+    intersection.color_diffuse[2] = ;
+    intersection.color_specular[0] = ;
+    intersection.color_specular[1] = ;
+    intersection.color_specular[2] = ;
+    intersection.normal[0] = ;
+    intersection.normal[1] = ;
+    intersection.normal[2] = ;
+    intersection.shininess = ;
+
+    // emit reflection ray
+    // diffuse reflection
+
+    // specular reflection
+
+    // emit refraction ray
+
+    // emit shadow ray (toward light source)
+
+    //return emitLight(, , depth + 1);
+
+}
+
 int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueList)
 /* numParts - how many names and values */
 {
@@ -665,9 +715,9 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 			GzMatrix& matrix = Ximage[count];
 			GzMatrix& Xn = Xnorm[count];
 			for (int h = 0; h < 3; ++h) {
-				std::vector<float> resultVec0(4);  // ½á¹ûÏòÁ¿ ³õÊ¼ÖµÎª0
-				std::vector<float> resultVec1(4);  // ½á¹ûÏòÁ¿ ³õÊ¼ÖµÎª0
-				verticesVec[h].push_back(1.0);  // À©Õ¹µ½4DÏòÁ¿
+				std::vector<float> resultVec0(4);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ê¼ÖµÎª0
+				std::vector<float> resultVec1(4);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ê¼ÖµÎª0
+				verticesVec[h].push_back(1.0);  // ï¿½ï¿½Õ¹ï¿½ï¿½4Dï¿½ï¿½ï¿½ï¿½
 				normalVec[h].push_back(1.0);
 				for (int j = 0; j < 4; ++j) {
 					for (int k = 0; k < 4; ++k) {
