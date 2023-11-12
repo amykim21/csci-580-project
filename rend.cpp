@@ -653,9 +653,29 @@ GzVertex getTriangleNormal(GzTriangle triangle, GzVertex intersection) {
     return normal;
 }
 
-bool isInShadow(Intersection intersection, Light light) {
-	// TODO
+bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 
+	GzRay shadowRay;
+	shadowRay.startPoint = intersection;
+	shadowRay.direction.position[0] = light.position[0] - intersection.position[0];
+	shadowRay.direction.position[1] = light.position[1] - intersection.position[1];
+	shadowRay.direction.position[2] = light.position[2] - intersection.position[2];
+
+	
+	for (int i = 0; i < numTriangles; i++) {
+		double t; // 
+		//
+		bool collision = collisionWithTriangle(shadowRay, triangles[i], &t);
+
+		// 
+		// 
+		if (collision && t >= 0 && t <= 1) {
+			return true;
+		}
+	}
+
+	// 
+	return false;
 }
 
 VectorCoord getBackgroundColor(Ray ray) {

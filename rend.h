@@ -34,6 +34,7 @@ public:
 	GzColor		flatcolor;          /* color state for flat shaded triangles */
 	int			interp_mode;
 	int			numlights;
+	int			numTriangles;
 	GzLight		lights[MAX_LIGHTS];
 	GzLight		ambientlight;
 	GzColor		Ka, Kd, Ks;
@@ -63,6 +64,7 @@ public:
 	int GzPutCamera(GzCamera camera);
 	int GzPushMatrix(GzMatrix	matrix);
 	int GzPopMatrix();
+	
 	bool isInShadow(GzVertex intersection, GzLight light);
 	// Extra methods: NOT part of API - just for general assistance */
 	inline int ARRAY(int x, int y){return (x+y*xres);}	/* simplify fbuf indexing */
