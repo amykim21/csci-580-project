@@ -1,3 +1,4 @@
+
 /*
  * Gz.h - include file for the cs580 rendering library
  */
@@ -160,3 +161,4 @@ typedef	struct {
 
 #define	MAXXRES	1024	/* put some bounds on size in case of error */
 #define	MAXYRES	1024
+
