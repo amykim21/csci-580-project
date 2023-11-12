@@ -53,6 +53,12 @@ typedef struct Triangle
     GzVertex v[3];
 }GzTriangle;
 
+class Ray {
+  public:
+    VectorCoord startPoint, direction;
+    Ray(VectorCoord _startPoint, VectorCoord _direction) : startPoint(_startPoint), direction(_direction) {}
+};
+
 typedef struct Sphere
 {
     double position[3];

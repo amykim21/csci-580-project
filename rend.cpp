@@ -624,63 +624,130 @@ VectorCoord interpolateTextureColor(VectorCoord v1, VectorCoord v2, float t)
 	return result;
 }
 
-VectorCoord getTriangleNormal(GzTriangle triangle) {
+GzVertex getTriangleNormal(GzTriangle triangle, GzVertex intersection) {
+    GzVertex A = triangle.v[0];
+    GzVertex B = triangle.v[1];
+    GzVertex C = triangle.v[2];
+
+    double x = intersection.position[0];
+    double y = intersection.position[1];
+    double x0 = A.position[0], y0 = A.position[1];
+    double x1 = B.position[0], y1 = B.position[1];
+    double x2 = C.position[0], y2 = C.position[1];
+
+    double alpha = ((y1 - y2) * (x - x2) + (x2 - x1) * (y - y2)) / ((y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2));
+    double beta = ((y2 - y0) * (x - x2) + (x0 - x2) * (y - y2)) / ((y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2));
+    double gamma = 1.0f - alpha - beta;
+    GzVertex normal;
+
+    for (int i = 0; i < 3; i++) {
+        normal.normal[i] = alpha * A.normal[i] + beta * B.normal[i] + gamma * C.normal[i];
+    }
+
+    // Normalizing
+    double length = sqrt(normal.normal[0] * normal.normal[0] + normal.normal[1] * normal.normal[1] + normal.normal[2] * normal.normal[2]);
+    for (int i = 0; i < 3; i++) {
+        normal.normal[i] /= length;
+    }
+
+    return normal;
+}
+
+bool isInShadow(Intersection intersection, Light light) {
+	// TODO
+
+}
+
+VectorCoord getBackgroundColor(Ray ray) {
 	// TODO
 }
 
+VectorCoord phongModel(Ray ray, Intersection intersection, Light light){
+    // Acquire light position, object position and viewpoint position.
+    VectorCoord light_pos = light.position;
+    VectorCoord obj_pos = intersection.position;
+    VectorCoord view_pos = ray.origin;
+
+    // The vector from the surface to light source (normalized) and the vector from the surface to viewer (normalized)
+    VectorCoord light_vec = normalize(light_pos - obj_pos);
+    VectorCoord view_vec = normalize(view_pos - obj_pos);
+
+    // Compute reflection vector
+    VectorCoord reflect_vec = reflect(negate(light_vec), intersection.normal);
+   // Calculate L (light direction), N (normal), R (reflected light direction), and V (view direction)
+    double L[3] = { light.position[0] - intersection.position[0],
+                    light.position[1] - intersection.position[1],
+                    light.position[2] - intersection.position[2] };
+    normalize(L);
+
+    double N[3] = { intersection.normal[0],
+                    intersection.normal[1],
+                    intersection.normal[2] };
+    normalize(N);
+
+    double R[3] = { 2.0 * dot_product(N, L) * N[0] - L[0],
+                    2.0 * dot_product(N, L) * N[1] - L[1],
+                    2.0 * dot_product(N, L) * N[2] - L[2] };
+    normalize(R);
+
+    double V[3] = { camera_pos[0] - intersection.position[0],
+                    camera_pos[1] - intersection.position[1],
+                    camera_pos[2] - intersection.position[2] };
+    normalize(V);
+
+    // Calculate Phong shading components: diffuse and specular
+    double diffuse = clamp(dot_product(L, N), 0.0, 1.0);
+    double specular = clamp(pow(clamp(dot_product(R, V), 0.0, 1.0), vertex.shininess), 0.0, 1.0);
+    // Initialize color with ambient light
+    VectorCoord color = Ka * light.color;
+
+    // Compute the diffuse part
+    VectorCoord diff = Kd * light.color * std::max(dotProduct(intersection.normal, light_vec), 0.0);
+
+    // Compute specular part
+    VectorCoord spec = Ks * light.color * pow(dotProduct(reflect_vec, view_vec), spec);
+
+    // If the object is in shadow, set the diffuse and specular part to 0
+    if (isInShadow(intersection, light)) {
+        diff = VectorCoord(0, 0, 0);
+        spec = VectorCoord(0, 0, 0);
+    }
+
+    // Total color is the sum of the ambient, diffuse and specular color
+    color += (diff + spec);
+
+    return color;
+}
+
 VectorCoord emitLight(VectorCoord startPoint, VectorCoord direction, int depth) {
+	int maxDepth = 5;
     VectorCoord normDirection = normalize(direction);
-
-    // find intersections with triangles and spheres
-    GzTriangle intersectedTriangle = NULL;
-    for (int i = 0; i < MAX_TRIANGLES; i++) {
-		float t = CollisionWithTriangles(startPoint, normDirection, triangles[i]);
-        if (t > 0 && t < t_min) {
-            t_min = t;
-            intersectedTriangle = &triangles[i];
-        }
+	// Check the intersection between the light beam and objects in the scene
+    VectorCoord hit;
+    Ray intersection;
+    if (!intersectScene(Ray(startPoint, direction), hit, intersection)) {
+        return getBackgroundColor(Ray(startPoint, direction));
     }
 
-    for (int i = 0; i < numlights; i++) {
+	GzVertex normal = getTriangleNormal(*intersectedTriangle, );
 
-    }
+	// Calculate the color based on the Phong model
+    VectorCoord localColor = phongModel(Ray(startPoint, direction), hit);
 
-    // if miss
-    if ((intersectedTriangle == NULL) || (depth > MAX_DEPTH_LIMIT)) {
-        VectorCoord black(3, 0);
-        return black;
-    }
-
-	// calculate intersection
-    GzColor finalColor = { 0, 0, 0 };
-    GzVertex intersection;
-    intersection.position[0] = ;
-    intersection.position[1] = ;
-    intersection.position[2] = ;
-    intersection.color_diffuse[0] = ;
-    intersection.color_diffuse[1] = ;
-    intersection.color_diffuse[2] = ;
-    intersection.color_specular[0] = ;
-    intersection.color_specular[1] = ;
-    intersection.color_specular[2] = ;
-
-	VectorCoord normal = getTriangleNormal(*intersectedTriangle);
-    intersection.normal[0] = normal[0];
-    intersection.normal[1] = normal[1];
-    intersection.normal[2] = normal[2];
-    intersection.shininess = ;
-
-    // emit reflection ray
-    // diffuse reflection
-
-    // specular reflection
-
-    // emit refraction ray
-
-    // emit shadow ray (toward light source)
-
-    //return emitLight(, , depth + 1);
-
+	// If the set maximum recursive depth is reached, no further reflection computation occurs
+    if (depth >= maxDepth)
+        return localColor;
+    
+    VectorCoord R = reflect(direction, hit);
+    Ray reflectedRay(hit, R);
+    
+    // Calculate the color of the reflection
+    VectorCoord reflectedColor = emitLight(reflectedRay, depth + 1);
+    
+    // The overall color is a combination of the color computed from the Phong model and the color of the reflection
+    VectorCoord color = localColor + reflectedColor * 0.8;
+    
+    return color;
 }
 
 int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueList)
