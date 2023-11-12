@@ -624,14 +624,20 @@ VectorCoord interpolateTextureColor(VectorCoord v1, VectorCoord v2, float t)
 	return result;
 }
 
+VectorCoord getTriangleNormal(GzTriangle triangle) {
+	// TODO
+}
+
 VectorCoord emitLight(VectorCoord startPoint, VectorCoord direction, int depth) {
     VectorCoord normDirection = normalize(direction);
 
     // find intersections with triangles and spheres
-    int intersectedTriangle = -1;
+    GzTriangle intersectedTriangle = NULL;
     for (int i = 0; i < MAX_TRIANGLES; i++) {
-        if (CollisionWithTriangles(startPoint, normDirection, triangles[i])) {
-            intersectedTriangle = i;
+		float t = CollisionWithTriangles(startPoint, normDirection, triangles[i]);
+        if (t > 0 && t < t_min) {
+            t_min = t;
+            intersectedTriangle = &triangles[i];
         }
     }
 
@@ -640,13 +646,13 @@ VectorCoord emitLight(VectorCoord startPoint, VectorCoord direction, int depth) 
     }
 
     // if miss
-    if ((intersectedTriangle == -1) /* || (depth > MAX_DEPTH_LIMIT)*/) {
+    if ((intersectedTriangle == NULL) || (depth > MAX_DEPTH_LIMIT)) {
         VectorCoord black(3, 0);
         return black;
     }
 
+	// calculate intersection
     GzColor finalColor = { 0, 0, 0 };
-
     GzVertex intersection;
     intersection.position[0] = ;
     intersection.position[1] = ;
@@ -657,9 +663,11 @@ VectorCoord emitLight(VectorCoord startPoint, VectorCoord direction, int depth) 
     intersection.color_specular[0] = ;
     intersection.color_specular[1] = ;
     intersection.color_specular[2] = ;
-    intersection.normal[0] = ;
-    intersection.normal[1] = ;
-    intersection.normal[2] = ;
+
+	VectorCoord normal = getTriangleNormal(*intersectedTriangle);
+    intersection.normal[0] = normal[0];
+    intersection.normal[1] = normal[1];
+    intersection.normal[2] = normal[2];
     intersection.shininess = ;
 
     // emit reflection ray
