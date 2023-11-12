@@ -63,7 +63,7 @@ public:
 	int GzPutCamera(GzCamera camera);
 	int GzPushMatrix(GzMatrix	matrix);
 	int GzPopMatrix();
-
+	bool isInShadow(GzVertex intersection, GzLight light);
 	// Extra methods: NOT part of API - just for general assistance */
 	inline int ARRAY(int x, int y){return (x+y*xres);}	/* simplify fbuf indexing */
 	inline short	ctoi(float color) {return(short)((int)(color * ((1 << 12) - 1)));}		/* convert float color to GzIntensity short */
