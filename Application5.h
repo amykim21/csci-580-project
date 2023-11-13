@@ -16,7 +16,7 @@ class Application5 : public Application
 public:
 	Application5();
 	virtual ~Application5();
-	
+	void RayTrace(int xRes,int yRes);
 	int	Initialize();
 	virtual int Render(); 
 	int Clean();

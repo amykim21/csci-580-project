@@ -261,6 +261,9 @@ VectorMatrix multiplyMatrix(VectorMatrix m1, VectorMatrix m2) {
 	}
 	return result;
 }
+
+
+
 int GzRender::GzBeginRender()
 {
 	/* HW 3.7
@@ -682,7 +685,20 @@ bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 VectorCoord getBackgroundColor(Ray ray) {
 	// TODO
 }
-
+void GzRender:: RayTrace(){
+	float d = tan((m_camera.FOV / 2) * (PI / 180));
+	float aspect_ratio= 1.0*xRes/yRes
+	for(int i =0;i<Xres;i++){
+		for(int j =0;j<Yres;j++){
+			x = (2 * (i + 0.5) / xRes - 1) * d * aspect_ratio;
+				
+			y = (1 - 2 * (j + 0.5) / yRes) * d;
+			VectorCoord color=emitLight(Ray(GzVertex(0,0,-1),GzVertex(x,y,1)));
+			GzPut(i, j, ctoi(color[RED]), ctoi(color[GREEN]), ctoi(color[BLUE]), 1, z);
+		}
+	}
+		
+}
 VectorCoord phongModel(Ray ray, Intersection intersection, Light light){
     // Acquire light position, object position and viewpoint position.
     VectorCoord light_pos = light.position;
@@ -740,7 +756,7 @@ VectorCoord phongModel(Ray ray, Intersection intersection, Light light){
     return color;
 }
 
-VectorCoord emitLight(VectorCoord startPoint, VectorCoord direction, int depth) {
+VectorCoord emitLight(Ray ray, int depth) {
 	int maxDepth = 5;
     VectorCoord normDirection = normalize(direction);
 	// Check the intersection between the light beam and objects in the scene
@@ -795,6 +811,54 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 			uvlist = static_cast<GzTextureIndex*>(valueList[i]);
 		}
 	}
+
+
+
+	if (vertices != NULL) {
+	// Sort vertices by y
+	std::vector<std::vector<float>> verticesVec, normalVec, UVlistVec;
+	std::vector<std::vector<float>> outputVec(3, std::vector<float>(3));
+	// Add each GzCoord to the vector
+	for (int i = 0; i < 3; ++i)
+	{
+		verticesVec.push_back(std::vector<float>(vertices[i], vertices[i] + 3));
+		normalVec.push_back(std::vector<float>(normals[i], normals[i] + 3));
+		UVlistVec.push_back(std::vector<float>(uvlist[i], uvlist[i] + 2));
+	}
+	for (int count = matlevel; count >= 2; count--) {
+		GzMatrix& matrix = Ximage[count];
+		GzMatrix& Xn = Xnorm[count];
+		for (int h = 0; h < 3; ++h) {
+			std::vector<float> resultVec0(4);  // ������� ��ʼֵΪ0
+			std::vector<float> resultVec1(4);  // ������� ��ʼֵΪ0
+			verticesVec[h].push_back(1.0);  // ��չ��4D����
+			normalVec[h].push_back(1.0);
+			for (int j = 0; j < 4; ++j) {
+				for (int k = 0; k < 4; ++k) {
+					resultVec0[j] += matrix[j][k] * verticesVec[h][k];
+					resultVec1[j] += Xn[j][k] * normalVec[h][k];
+				}
+			}
+			verticesVec[h].pop_back();
+			normalVec[h].pop_back();
+			verticesVec[h][0] = resultVec0[0] / resultVec0[3];
+			verticesVec[h][1] = resultVec0[1] / resultVec0[3];
+			verticesVec[h][2] = resultVec0[2] / resultVec0[3];
+			normalVec[h][0] = resultVec1[0] / resultVec1[3];
+			normalVec[h][1] = resultVec1[1] / resultVec1[3];
+			normalVec[h][2] = resultVec1[2] / resultVec1[3];
+			if (count == 2 && verticesVec[h][2] < 0) {
+				return GZ_FAILURE;
+			}
+		}
+	}
+	for (int i = 0; i < 3; i++) {
+		for (int j = 0; j < 3; j++) {
+			vertices[i][j] = verticesVec[i][j];
+			normals[i][j] = normalVec[i][j];
+			
+		}
+	}
 	if (vertices != nullptr && normals != nullptr && numTriangles < MAX_TRIANGLES) {
 		for (int i = 0; i < 3; i++) {
 			GzVertex v(vertices[i], normals[i]);
@@ -802,6 +866,11 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 			numTriangles++;
 		}
 	}
+
+
+
+
+
 	//float d= 1.0/tan((m_camera.FOV / 2) * (PI / 180));
 	//if (vertices != NULL) {
 	//	// Sort vertices by y

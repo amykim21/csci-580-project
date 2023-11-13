@@ -55,6 +55,11 @@ typedef struct Vertex
         memset(color_specular, 0, sizeof(color_specular));
         shininess = 0;
     }
+    Vertex(float x, float y, float z) {
+        position[0]=x;
+        position[1]=y;
+        position[2]=z;
+    }
     Vertex() {
         
     }
