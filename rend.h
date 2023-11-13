@@ -17,6 +17,7 @@
 #define	MATLEVELS	100		/* how many matrix pushes allowed */
 #define	MAX_LIGHTS	10		/* how many lights allowed */
 #define	MAX_TRIANGLES	10000		/* how many triangles allowed */
+
 class GzRender{			/* define a renderer */
   
 
@@ -25,6 +26,7 @@ public:
 	unsigned short	yres;
 	GzPixel		*pixelbuffer;		/* frame buffer array */
 	char* framebuffer;
+	short	triangleNum;
 	GzTriangle triangles[MAX_TRIANGLES];
 	GzCamera		m_camera;
 	short		    matlevel;	        /* top of stack - current xform */
@@ -75,6 +77,10 @@ public:
 	int GzRotZMat(float degree, GzMatrix mat);
 	int GzTrxMat(GzCoord translate, GzMatrix mat);
 	int GzScaleMat(GzCoord scale, GzMatrix mat);
+
+	bool GzCollisionWithTriange(GzLight light, int& index);
+	bool GzCollisionWithSpecificTriangle(GzLight light, GzTriangle triangle, double intersectPos[3]);
+	void FresnelReflection(GzLight light, GzTriangle triangle, GzLight reflectLight, GzLight refractLight);
 
 };
 #endif
