@@ -42,6 +42,7 @@ Application5::~Application5()
 	Clean();
 }
 
+
 int Application5::Initialize()
 {
 	GzCamera	camera;  

@@ -1,3 +1,4 @@
+
 /*
  * Gz.h - include file for the cs580 rendering library
  */
@@ -41,23 +42,44 @@
 #define	GZ_NORMALS		2	/* interpolate normals */
 typedef struct Vertex
 {
-    double position[3];
-    double color_diffuse[3];
-    double color_specular[3];
-    double normal[3];
-    double shininess;
+    float position[3];
+    float color_diffuse[3];
+    float color_specular[3];
+    float normal[3];
+    float shininess;
+    Vertex(GzCoord position_, GzCoord normal_) {
+        memcpy(position, position_, sizeof(position));
+        memcpy(normal, normal_, sizeof(normal));
+        // color_diffuse 和 color_specular 添加默认值也可以
+        memset(color_diffuse, 0, sizeof(color_diffuse));
+        memset(color_specular, 0, sizeof(color_specular));
+        shininess = 0;
+    }
+    Vertex(float x, float y, float z) {
+        position[0]=x;
+        position[1]=y;
+        position[2]=z;
+    }
+    Vertex() {
+        
+    }
 }GzVertex;
 
 typedef struct Triangle
 {
     GzVertex v[3];
+    Triangle(GzVertex v0, GzVertex v1, GzVertex v2) {
+        v[0] = v0;
+        v[1] = v1;
+        v[2] = v2;
+    }
 }GzTriangle;
 
 typedef struct Ray {
   public:
     GzVertex startPoint, direction;
     
-};
+}GzRay;
 
 typedef struct Sphere
 {
@@ -144,3 +166,4 @@ typedef	struct {
 
 #define	MAXXRES	1024	/* put some bounds on size in case of error */
 #define	MAXYRES	1024
+
