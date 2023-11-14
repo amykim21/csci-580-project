@@ -212,7 +212,7 @@ VectorCoord normalize(GzCoord v) {
 	};
 	return result;
 }
-// dotº¯ÊýÓÃÓÚ¼ÆËãÁ½¸öÏòÁ¿µÄµã»ý
+// dotï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äµï¿½ï¿½
 float dot(VectorCoord v1, VectorCoord v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
@@ -231,7 +231,7 @@ VectorCoord multiply(float v1, VectorCoord v2) {
 	return result;
 }
 
-// crossº¯ÊýÓÃÓÚ¼ÆËãÁ½¸öÏòÁ¿µÄ²æ»ý
+// crossï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½
 VectorCoord cross(VectorCoord v1, VectorCoord v2) {
 	VectorCoord result = {
 		v1[1] * v2[2] - v1[2] * v2[1],
@@ -249,7 +249,7 @@ VectorCoord decreaseCoord(VectorCoord v1, VectorCoord v2) {
 	};
 	return result;
 }
-// ¾ØÕóÏà³Ë
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 VectorMatrix multiplyMatrix(VectorMatrix m1, VectorMatrix m2) {
 	VectorMatrix result(4, std::vector<float>(4, 0));
 	for (int i = 0; i < 4; ++i) {
@@ -273,7 +273,7 @@ int GzRender::GzBeginRender()
 
 	VectorCoord camDir, camRight, camUp;
 
-	// ¼ÆËãCameraµÄÏòÁ¿
+	// ï¿½ï¿½ï¿½ï¿½Cameraï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 
 	VectorCoord vecLookAt(m_camera.lookat, m_camera.lookat + sizeof m_camera.lookat / sizeof m_camera.lookat[0]);
 	VectorCoord vecPosition(m_camera.position, m_camera.position + sizeof m_camera.position / sizeof m_camera.position[0]);
@@ -282,7 +282,7 @@ int GzRender::GzBeginRender()
 	camRight = normalize(cross(vecWorldup, camDir));
 	camUp = normalize(decreaseCoord(vecWorldup, multiply(dot(vecWorldup, camDir), camDir)));
 
-	// ¼ÆËã Xiw
+	// ï¿½ï¿½ï¿½ï¿½ Xiw
 	float XiwData0[4][4] = {
 		{camRight[X], camRight[Y], camRight[Z],0},
 		{camUp[X], camUp[Y], camUp[Z], 0},
@@ -304,7 +304,7 @@ int GzRender::GzBeginRender()
 	//	}
 	//}
 
-	// ¼ÆËã Xpi
+	// ï¿½ï¿½ï¿½ï¿½ Xpi
 	float d = tan((m_camera.FOV / 2) * (PI / 180));
 	float XpiData[4][4] = {
 		{1, 0, 0, 0},
@@ -318,7 +318,7 @@ int GzRender::GzBeginRender()
 	//		Xpi[i][j] = XpiData[i][j];
 	//	}
 	//}
-	// ¼ÆËã Xsp
+	// ï¿½ï¿½ï¿½ï¿½ Xsp
 	float XspData[4][4] = {
 		{xres * 0.5, 0, 0, xres * 0.5},
 		{0, -yres * 0.5, 0, yres * 0.5},
@@ -336,10 +336,10 @@ int GzRender::GzBeginRender()
 	//		Xsp0[i][j] = XspData[i][j];
 	//	}
 	//}
-	// ¼ÆËã Xsw
+	// ï¿½ï¿½ï¿½ï¿½ Xsw
 	//VectorMatrix Xsw = multiplyMatrix(multiplyMatrix(Xsp0, Xpi), Xiw);
 
-	// ²»ÂÛºÎÊ± Xsw ×ÜÊÇÔÚ stack µÄµ×²¿
+	// ï¿½ï¿½ï¿½Ûºï¿½Ê± Xsw ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ stack ï¿½Äµ×²ï¿½
 	matlevel = -1;
 	//GzMatrix floatXsw = {
 	//	{Xsw[0][0],Xsw[0][1],Xsw[0][2],Xsw[0][3]},
@@ -583,7 +583,7 @@ int GzRender::GzPutAttribute(int numAttributes, GzToken* nameList, GzPointer* va
 			GzTexture sp = (GzTexture)valueList[i];
 			this->tex_fun = sp;
 			break;
-		}							// ÔÚ´Ë´¦»¹¿ÉÒÔÌí¼Ó¸ü¶àÊôÐÔÉèÖÃ´úÂë
+		}							// ï¿½Ú´Ë´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½
 		}
 	}
 	return GZ_SUCCESS;
@@ -665,9 +665,9 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 			GzMatrix& matrix = Ximage[count];
 			GzMatrix& Xn = Xnorm[count];
 			for (int h = 0; h < 3; ++h) {
-				std::vector<float> resultVec0(4);  // ½á¹ûÏòÁ¿ ³õÊ¼ÖµÎª0
-				std::vector<float> resultVec1(4);  // ½á¹ûÏòÁ¿ ³õÊ¼ÖµÎª0
-				verticesVec[h].push_back(1.0);  // À©Õ¹µ½4DÏòÁ¿
+				std::vector<float> resultVec0(4);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ê¼ÖµÎª0
+				std::vector<float> resultVec1(4);  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ê¼ÖµÎª0
+				verticesVec[h].push_back(1.0);  // ï¿½ï¿½Õ¹ï¿½ï¿½4Dï¿½ï¿½ï¿½ï¿½
 				normalVec[h].push_back(1.0);
 				for (int j = 0; j < 4; ++j) {
 					for (int k = 0; k < 4; ++k) {
@@ -1118,4 +1118,79 @@ void GzRender::FresnelReflection(GzLight light, GzTriangle triangle, GzLight ref
 	double refractIndex = 1.5; // Self-defined to 1.5 because the storing location of refractive index undecided yet
 
 
+}
+
+/**
+ * Check if a ray intersects with a sphere.
+ *
+ * @param origin The origin of the ray
+ * @param direction The direction of the ray
+ * @param center The center of the sphere
+ * @param radius The radius of the sphere
+ * @param t A reference to store the distance from the origin to the intersection point
+ * @return A boolean indicating if the ray intersects with the sphere
+ */
+bool RayIntersectsSphere(const double origin[3], const double direction[3], const double center[3], double radius, double &t) {
+    double oc[3] = { origin[0] - center[0], origin[1] - center[1], origin[2] - center[2] };
+    double b = 2 * dotArray(oc, direction);
+    double c = dotArray(oc, oc) - radius * radius;
+    double discriminant = b * b - 4 * c;
+    if (discriminant < 0) {
+        return false; // No intersection
+    } else {
+        discriminant = sqrt(discriminant);
+        double t0 = (-b - discriminant) / 2;
+        double t1 = (-b + discriminant) / 2;
+        t = (t0 < t1) ? t0 : t1;
+        return true; // Intersection occurs
+    }
+}
+
+/**
+ * Given a light, return if the light is colliding with any sphere in the scene.
+ *
+ * @param light The input light for collision detection
+ * @param index The output index of first colliding sphere
+ * @return A boolean indicating if the light is colliding with any sphere
+ */
+bool GzRender::GzCollisionWithSphere(GzLight light, int &index) {
+    index = -1;
+    double closest_t = std::numeric_limits<double>::max();
+    double t;
+    for (int i = 0; i < sphereNum; i++) {
+        if (RayIntersectsSphere(light.origin, light.direction, spheres[i].center, spheres[i].radius, t)) {
+            if (t < closest_t) {
+                closest_t = t;
+                index = i;
+            }
+        }
+    }
+    return index != -1;
+}
+
+/**
+ * Calculates the reflection and refraction vectors given an intersection point with a sphere.
+ *
+ * @param light The incoming light
+ * @param sphere The sphere with which the light interacts
+ * @param intersectionPoint The point of intersection
+ * @param reflectLight The reflected light
+ * @param refractLight The refracted light
+ */
+void GzRender::CalculateSphereReflectionAndRefraction(GzLight light, GzSphere sphere, const double intersectionPoint[3], GzLight &reflectLight, GzLight &refractLight) {
+    // Calculate normal at the intersection point
+    double normal[3] = {
+        (intersectionPoint[0] - sphere.center[0]) / sphere.radius,
+        (intersectionPoint[1] - sphere.center[1]) / sphere.radius,
+        (intersectionPoint[2] - sphere.center[2]) / sphere.radius
+    };
+
+    // Calculate reflection vector
+    double dot_ln = dotArray(light.direction, normal);
+    reflectLight.direction[0] = light.direction[0] - 2 * dot_ln * normal[0];
+    reflectLight.direction[1] = light.direction[1] - 2 * dot_ln * normal[1];
+    reflectLight.direction[2] = light.direction[2] - 2 * dot_ln * normal[2];
+
+    // Refraction is not implemented in this example, as it requires a more complex formula
+    // and knowledge about the material of the sphere (refractive index)
 }
