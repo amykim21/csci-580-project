@@ -657,6 +657,7 @@ GzVertex getTriangleNormal(GzTriangle triangle, GzVertex intersection) {
     return normal;
 }
 
+// if we don't use Phong model, then isInShadow is not needed because recursion can also produce shadow
 bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 
 	GzRay shadowRay;
@@ -756,31 +757,41 @@ VectorCoord phongModel(Ray ray, Intersection intersection, Light light){
     return color;
 }
 
+VectorCoord fresnelReflection(/*tell me what parameters you need*/) {
+	// TODO: Chris
+}
+
 VectorCoord emitLight(Ray ray, int depth) {
 	int maxDepth = 5;
-    VectorCoord normDirection = normalize(direction);
+    VectorCoord normDirection = normalize(ray.direction);
 	// Check the intersection between the light beam and objects in the scene
-    VectorCoord hit;
-    Ray intersection;
-    if (!intersectScene(Ray(startPoint, direction), hit, intersection)) {
-        return getBackgroundColor(Ray(startPoint, direction));
+    VectorCoord intersection; // intersection point between ray and object?
+    //Ray intersection;
+	// intersect either sphere or triangle
+    if (!intersectObject(/*ray, intersection*/)) { // TODO: negotiate how to call intersectScene (Kevin)
+        return getBackgroundColor(); // just black is ok
     }
 
-	GzVertex normal = getTriangleNormal(*intersectedTriangle, );
+	//GzVertex normal = getTriangleNormal(*intersectedTriangle, );
 
 	// Calculate the color based on the Phong model
-    VectorCoord localColor = phongModel(Ray(startPoint, direction), hit);
+    //VectorCoord localColor = phongModel(Ray(startPoint, direction), hit);
+	VectorCoord localColor = fresnelReflection(); // TODO: get from Chris
 
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
     if (depth >= maxDepth)
         return localColor;
     
-    VectorCoord R = reflect(direction, hit);
-    Ray reflectedRay(hit, R);
+    VectorCoord reflection = reflect(); // TODO: get from Chris
+    Ray reflectedRay(intersection, reflection);
+
+	VectorCoord refraction = refract(); // TODO: get from Chris
+	Ray refractedRay(intersection, refraction);
     
     // Calculate the color of the reflection
     VectorCoord reflectedColor = emitLight(reflectedRay, depth + 1);
-    
+	VectorCoord refractedColor = emitLight(refractedRay, depth + 1);
+
     // The overall color is a combination of the color computed from the Phong model and the color of the reflection
     VectorCoord color = localColor + reflectedColor * 0.8;
     
