@@ -1191,6 +1191,5 @@ void GzRender::CalculateSphereReflectionAndRefraction(GzLight light, GzSphere sp
     reflectLight.direction[1] = light.direction[1] - 2 * dot_ln * normal[1];
     reflectLight.direction[2] = light.direction[2] - 2 * dot_ln * normal[2];
 
-    // Refraction is not implemented in this example, as it requires a more complex formula
-    // and knowledge about the material of the sphere (refractive index)
+    // TODO: refraction
 }
