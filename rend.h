@@ -25,6 +25,8 @@ public:
 	unsigned short	yres;
 	GzPixel		*pixelbuffer;		/* frame buffer array */
 	char* framebuffer;
+	short	triangleNum;
+	short	sphereNum;
 	GzTriangle triangles[MAX_TRIANGLES];
 	GzCamera		m_camera;
 	short		    matlevel;	        /* top of stack - current xform */

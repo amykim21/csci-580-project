@@ -1188,3 +1188,228 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 	return GZ_SUCCESS;
 }
 
+// Dot product for vector
+template<typename T1, typename T2>
+double dotArray(T1 a[3], T2 b[3]) {
+	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+// Cross product for vector
+template<typename T1, typename T2, typename T3>
+void crossArray(T1 a[3], T2 b[3], T3 c[3]) {
+	c[0] = a[1] * b[2] - a[2] * b[1];
+	c[1] = a[2] * b[0] - a[0] * b[2];
+	c[2] = a[0] * b[1] - a[1] * b[0];
+}
+
+/**
+ * Given triangle vertex position a, b, c; check if point p within the triangle(assume they already in the same plane)
+ *
+ * @param p Point P
+ * @param a Triangle vertex position A
+ * @param b Triangle vertex position B
+ * @param c Triangle vertex position C
+ * @param n Triangle plane normal vector
+ * @return A boolean indiciating if the point p within triangle abc
+ */
+template<typename T1, typename T2, typename T3, typename T4, typename T5>
+bool IsPointWithinTriangle(T1 p[3], T2 a[3], T3 b[3], T4 c[3], T5 n[3])
+{
+	double AB[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] };
+	double AP[3] = { p[0] - a[0], p[1] - a[1], p[2] - a[2] };
+	bool test1 = (dotArray(crossArray(AB, AP), n) >= 0);
+
+	double BC[3] = { c[0] - b[0], c[1] - b[1], c[2] - b[2] };
+	double BP[3] = { p[0] - b[0], p[1] - b[1], p[2] - b[2] };
+	bool test2 = (dotArray(crossArray(BC, BP), n) >= 0);
+
+	double CA[3] = { a[0] - c[0], a[1] - c[1], a[2] - c[2] };
+	double CP[3] = { p[0] - c[0], p[1] - c[1], p[2] - c[2] };
+	bool test3 = (dotArray(crossArray(CA, CP), n) >= 0);
+
+	return test1 && test2 && test3;
+}
+
+/**
+ * Given a light, return if the light is colliding with any triangle
+ *
+ * @param light The input light for collision detection
+ * @param index The output index of first colliding triangle
+ * @return A boolean indiciating if the light is colliding with any triangle
+ */
+bool GzRender::GzCollisionWithTriange(GzLight light, int &index)
+{
+	index = -1;
+	double firstIntersectPos[3];
+	for (int i = 0; i < triangleNum; i++)
+	{
+		double currIntersectPos[3];
+		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
+		{
+			// If intersects, check if other triangle has collided with the light yet
+			if (index == -1)
+			{
+				// Light not collide with other triangles yet
+				index = i;
+				firstIntersectPos[0] = currIntersectPos[0];
+				firstIntersectPos[1] = currIntersectPos[1];
+				firstIntersectPos[2] = currIntersectPos[2];
+			}
+			else
+			{
+				// Light collided with other triangles before, check intersection position
+
+				// Intersection points are points on light direction vector, so we only need to compare one of the dimensions.
+				// We need to select a non-zero value from one of the dimensions.
+				int j;
+				for (j = 0; j < 3; j++)
+				{
+					if (light.direction[j] > 0) break;
+				}
+
+				// If the "firstPos-->currPos" vector and the light direction vector are having different signs, 
+				// then currPos will be the first point the light is colliding.
+				double diff = currIntersectPos[j] - firstIntersectPos[j];
+				if (diff / light.direction[0] < 0)
+				{
+					// Then current triangle will be the first triangle intersecting
+					index = i;
+					firstIntersectPos[0] = currIntersectPos[0];
+					firstIntersectPos[1] = currIntersectPos[1];
+					firstIntersectPos[2] = currIntersectPos[2];
+				}
+			}
+		}
+	}
+	// If index is valid return true
+	return index != -1;
+}
+
+/**
+ * Given a light, return if the light is colliding with a specific triangle
+ *
+ * @param light The input light for collision detection
+ * @param triangle The input triangle for collision detection
+ * @param intersectPos The intersecting point as array pointer
+ * @return A boolean indiciating if the light is colliding with the input triangle
+ */
+bool GzRender::GzCollisionWithSpecificTriangle(GzLight light, GzTriangle triangle, double intersectPos[3])
+{
+	double e1[3] = {triangle.v[1].position[0] - triangle.v[0].position[0],
+					triangle.v[1].position[1] - triangle.v[0].position[1],
+					triangle.v[1].position[2] - triangle.v[0].position[2] };
+	double e2[3] = {triangle.v[2].position[0] - triangle.v[0].position[0],
+					triangle.v[2].position[1] - triangle.v[0].position[1],
+					triangle.v[2].position[2] - triangle.v[0].position[2] };
+
+	// Normal to triangle plane
+	float e1e2Norm[3];
+	crossArray(e1, e2, e1e2Norm);
+
+	// If flat triangle normal perpendicular to light, then no intersection in terms of direction
+	if (abs(dot(e1e2Norm, light.direction) < 0.0001))
+	{
+		return false;
+	}
+
+	// Compute intersection point(with triangle's plane)
+	// d = n dot x
+	// t = (d - n dot p) / (n dot d)
+	float d = dotArray(e1e2Norm, triangle.v[0].position);
+	double t = (d - dotArray(e1e2Norm, light.origin)) / dotArray(e1e2Norm, light.direction);
+	intersectPos[0] = light.origin[0] + t * light.direction[0];
+	intersectPos[1] = light.origin[1] + t * light.direction[1];
+	intersectPos[2] = light.origin[2] + t * light.direction[2];
+
+	// Check if the point is within triangle
+	return IsPointWithinTriangle(intersectPos, triangle.v[0].position, triangle.v[1].position, triangle.v[2].position, e1e2Norm);
+}
+
+/**
+ * Given a light and a triangle(need to be intersected beforehand), get its reflective and refractive light
+ *
+ * @param light The input light
+ * @param triangle The input triangle
+ * @param reflectLight The output reflective light
+ * @param refractLight The output refractive light
+ */
+void GzRender::FresnelReflection(GzLight light, GzTriangle triangle, GzLight reflectLight, GzLight refractLight)
+{
+	double refractIndex = 1.5; // Self-defined to 1.5 because the storing location of refractive index undecided yet
+
+
+}
+
+/**
+ * Check if a ray intersects with a sphere.
+ *
+ * @param origin The origin of the ray
+ * @param direction The direction of the ray
+ * @param center The center of the sphere
+ * @param radius The radius of the sphere
+ * @param t A reference to store the distance from the origin to the intersection point
+ * @return A boolean indicating if the ray intersects with the sphere
+ */
+bool RayIntersectsSphere(const double origin[3], const double direction[3], const double center[3], double radius, double &t) {
+    double oc[3] = { origin[0] - center[0], origin[1] - center[1], origin[2] - center[2] };
+    double b = 2 * dotArray(oc, direction);
+    double c = dotArray(oc, oc) - radius * radius;
+    double discriminant = b * b - 4 * c;
+    if (discriminant < 0) {
+        return false; // No intersection
+    } else {
+        discriminant = sqrt(discriminant);
+        double t0 = (-b - discriminant) / 2;
+        double t1 = (-b + discriminant) / 2;
+        t = (t0 < t1) ? t0 : t1;
+        return true; // Intersection occurs
+    }
+}
+
+/**
+ * Given a light, return if the light is colliding with any sphere in the scene.
+ *
+ * @param light The input light for collision detection
+ * @param index The output index of first colliding sphere
+ * @return A boolean indicating if the light is colliding with any sphere
+ */
+bool GzRender::GzCollisionWithSphere(GzLight light, int &index) {
+    index = -1;
+    double closest_t = std::numeric_limits<double>::max();
+    double t;
+    for (int i = 0; i < sphereNum; i++) {
+        if (RayIntersectsSphere(light.origin, light.direction, spheres[i].center, spheres[i].radius, t)) {
+            if (t < closest_t) {
+                closest_t = t;
+                index = i;
+            }
+        }
+    }
+    return index != -1;
+}
+
+/**
+ * Calculates the reflection and refraction vectors given an intersection point with a sphere.
+ *
+ * @param light The incoming light
+ * @param sphere The sphere with which the light interacts
+ * @param intersectionPoint The point of intersection
+ * @param reflectLight The reflected light
+ * @param refractLight The refracted light
+ */
+void GzRender::CalculateSphereReflectionAndRefraction(GzLight light, GzSphere sphere, const double intersectionPoint[3], GzLight &reflectLight, GzLight &refractLight) {
+    // Calculate normal at the intersection point
+    double normal[3] = {
+        (intersectionPoint[0] - sphere.center[0]) / sphere.radius,
+        (intersectionPoint[1] - sphere.center[1]) / sphere.radius,
+        (intersectionPoint[2] - sphere.center[2]) / sphere.radius
+    };
+
+    // Calculate reflection vector
+    double dot_ln = dotArray(light.direction, normal);
+    reflectLight.direction[0] = light.direction[0] - 2 * dot_ln * normal[0];
+    reflectLight.direction[1] = light.direction[1] - 2 * dot_ln * normal[1];
+    reflectLight.direction[2] = light.direction[2] - 2 * dot_ln * normal[2];
+
+    // TODO: refraction
+}
