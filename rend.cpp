@@ -951,7 +951,7 @@ VectorCoord emitLight(GzRay ray, int depth) {
     // The overall color is a combination of the color computed from the Phong model and the color of the reflection
     //VectorCoord color = localColor + reflectedColor * 0.8;
     
-    return color;
+    return localColor	;
 }
 
 int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueList)
