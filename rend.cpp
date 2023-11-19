@@ -1086,15 +1086,26 @@ void GzRender::CalculateSphereReflectionAndRefraction(GzLight light, GzSphere sp
     // TODO: refraction
 }
 
+// ++++++++++++++++++Start of BST Tree Implementation
+
 // BSP Tree Node
 class BSPNode {
 public:
-    Plane partitionPlane;
-    BSPNode* front;
-    BSPNode* back;
-    std::vector<Object*> objects;
+    Plane partitionPlane; // The plane dividing this node
+    BSPNode* front;       // The front child node
+    BSPNode* back;        // The back child node
+    std::vector<Object*> objects; // Objects in this node
 
     BSPNode() : front(nullptr), back(nullptr) {}
+
+    ~BSPNode() {
+        delete front;
+        delete back;
+    }
+
+    bool isLeaf() const {
+        return !front && !back;
+    }
 };
 
 // BSP Tree
@@ -1104,12 +1115,81 @@ public:
 
     BSPTree() : root(nullptr) {}
 
-    void buildTree(std::vector<Object*>& objects) {
-        // Implement BSP tree construction here
+    ~BSPTree() {
+        delete root;
     }
 
-    Object* traverse(Ray& ray) {
-        // Implement ray traversal here
-        // Return the closest object that intersects with the ray
+    // Recursively build the BSP tree from a list of objects
+    BSPNode* buildTree(const std::vector<Object*>& objects, int depth = 0) {
+        if (objects.empty() || depth > MAX_DEPTH) {
+            return nullptr;
+        }
+
+        BSPNode* node = new BSPNode();
+
+        Plane partitionPlane = choosePartitionPlane(objects);
+        std::vector<Object*> frontObjects;
+        std::vector<Object*> backObjects;
+        partitionObjects(objects, partitionPlane, frontObjects, backObjects);
+
+        node->partitionPlane = partitionPlane;
+        node->front = buildTree(frontObjects, depth + 1);
+        node->back = buildTree(backObjects, depth + 1);
+
+        // If this is a leaf node, assign the objects to this node
+        if (node->isLeaf()) {
+            node->objects = objects;
+        }
+
+        return node;
+    }
+
+    // Traverse the BSP tree with a ray to find the closest intersection
+    Object* traverse(Ray& ray, BSPNode* node, float& closestDistance) {
+        if (!node || node->isLeaf()) {
+            return findClosestIntersection(ray, node->objects, closestDistance);
+        }
+
+        // Determine the order to traverse front and back child based on the ray direction
+        bool frontFirst = ray.direction.dot(node->partitionPlane.normal) < 0;
+        BSPNode* firstChild = frontFirst ? node->front : node->back;
+        BSPNode* secondChild = frontFirst ? node->back : node->front;
+
+        // Traverse the first child
+        Object* closestObject = traverse(ray, firstChild, closestDistance);
+
+        // If the closest intersection is further than the partition plane, also check the second child
+        if (closestDistance > node->partitionPlane.distance(ray.origin)) {
+            Object* secondClosestObject = traverse(ray, secondChild, closestDistance);
+            if (secondClosestObject) {
+                closestObject = secondClosestObject;
+            }
+        }
+
+        return closestObject;
+    }
+
+private:
+    // A function to choose the best partition plane based on a heuristic
+    Plane choosePartitionPlane(const std::vector<Object*>& objects) {
+        // Implement heuristic here
+    }
+
+    // A function to partition objects into front and back lists based on a plane
+    void partitionObjects(const std::vector<Object*>& objects, const Plane& plane,
+                          std::vector<Object*>& frontObjects, std::vector<Object*>& backObjects) {
+        // Implement partitioning logic here
+    }
+
+    // A function to find the closest intersection within a list of objects
+    Object* findClosestIntersection(Ray& ray, const std::vector<Object*>& objects, float& closestDistance) {
+        // Implement intersection logic here
     }
 };
+
+/*
+BSPTree bspTree;
+bspTree.root = bspTree.buildTree(sceneObjects);
+float closestDistance = std::numeric_limits<float>::infinity();
+Object* closestObject = bspTree.traverse(ray, bspTree.root, closestDistance);
+*/
