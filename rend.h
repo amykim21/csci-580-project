@@ -80,6 +80,7 @@ public:
 	int GzTrxMat(GzCoord translate, GzMatrix mat);
 	int GzScaleMat(GzCoord scale, GzMatrix mat);
 
+	VectorCoord FresnelReflection(GzRay light, VectorCoord intersection, GzTriangle triangle, int depth);
 	bool GzCollisionWithTriangle(GzLight light, int& index);
 	bool GzCollisionWithSpecificTriangle(GzLight light, GzTriangle triangle, double intersectPos[3]);
 };
