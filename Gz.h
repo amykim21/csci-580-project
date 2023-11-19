@@ -1,3 +1,4 @@
+
 /*
  * Gz.h - include file for the cs580 rendering library
  */
@@ -39,29 +40,57 @@
 #define GZ_FLAT			0	/* do flat shading with GZ_RBG_COLOR */
 #define	GZ_COLOR		1	/* interpolate vertex color */
 #define	GZ_NORMALS		2	/* interpolate normals */
-
-#ifndef GZVERTEX
-#define GZVERTEX
 typedef struct GzVertex
 {
-    double position[3];
-    double color_diffuse[3];
-    double color_specular[3];
-    double normal[3];
-    double shininess;
+    float position[3];
+    float color_diffuse[3];
+    float color_specular[3];
+    float normal[3];
+    float shininess;
+    GzVertex(GzCoord position_, GzCoord normal_) {
+        memcpy(position, position_, sizeof(position));
+        memcpy(normal, normal_, sizeof(normal));
+        // color_diffuse 和 color_specular 添加默认值也可以
+        memset(color_diffuse, 0, sizeof(color_diffuse));
+        memset(color_specular, 0, sizeof(color_specular));
+        shininess = 0;
+    }
+    GzVertex(float x, float y, float z) {
+        position[0]=x;
+        position[1]=y;
+        position[2]=z;
+    }
+    GzVertex() {
+        
+    }
 } GzVertex;
-#endif
 
-#ifndef GZTRIANGLE
-#define GZTRIANGLE
 typedef struct GzTriangle
 {
     GzVertex v[3];
-} GzTriangle;
-#endif
 
-#ifndef GZSPHERE
-#define GZSPHERE
+    // Source:https://en.wikipedia.org/wiki/List_of_refractive_indices
+    // Use plate glass(window glass) refractive index as default
+    float refract_index = 1.52; 
+
+    GzTriangle(GzVertex v0, GzVertex v1, GzVertex v2) {
+        v[0] = v0;
+        v[1] = v1;
+        v[2] = v2;
+    }
+    GzTriangle() {}
+} GzTriangle;
+
+typedef struct GzRay {
+  public:
+    GzRay() {}
+    GzRay(GzVertex start, GzVertex dir) {
+        startPoint = start;
+        direction = dir;
+    };
+    GzVertex startPoint, direction;
+}GzRay;
+
 typedef struct GzSphere
 {
     double position[3];
@@ -70,7 +99,11 @@ typedef struct GzSphere
     double shininess;
     double radius;
 } GzSphere;
-#endif
+
+typedef struct GzLight {
+    double position[3];
+    double color[3];
+} GzLight;
 
 typedef int     GzToken;
 typedef void    *GzPointer;
@@ -106,7 +139,6 @@ typedef struct  GzLight
 {
   GzCoord        direction;    /* vector from surface to light */
   GzColor        color;		/* light color intensity */
-  GzCoord        origin;
 } GzLight;
 #endif
 
@@ -146,3 +178,4 @@ typedef	struct {
 
 #define	MAXXRES	1024	/* put some bounds on size in case of error */
 #define	MAXYRES	1024
+
