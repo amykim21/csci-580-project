@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <stdlib.h> 
 
 #define PI (float) 3.14159265358979323846
 #define DEG2RAD(degree) ((degree) * (PI / 180.0))
@@ -855,7 +856,7 @@ VectorCoord GzRender::FresnelReflection(GzRay light, VectorCoord intersection, G
 	// Equation source: An improved illumination model for shaded display, Sec 2 Improved model
 	// The total light color will be: (ambient color) + kd * (sum of diffuse lights) + ks * (reflect light, also known as specular) + kt * (refract light)
 
-	GzVertex N = getTriangleNormal(triangle, intersection);	// Compute normal at intersection point
+	GzVertex N = getTriangleNormal(triangle, intersection);	// Compute normal vector at intersection point
 	normalize(N);
 	float n_air = 1; // Refractive index of air, 1.0003
 	float n1, n2;	// (Incoming n1), (refracting n2) for the refractive index
@@ -913,10 +914,27 @@ VectorCoord GzRender::FresnelReflection(GzRay light, VectorCoord intersection, G
 
 	// Compute total color
 	// TODO: Diffuse color formula undecided
+	float r1 = (rand() / (float)RAND_MAX) * 2 * M_PI;	// Rand samples fron 0 to RAND_MAX, scale it to 2 pi
+	float r2 = (rand() / (float)RAND_MAX) * M_PI / 2;	// vertical angle from 0 to pi / 2
+
+	// N is normal to the current point, we need to find the x y plane perpendicular to it
+	GzCoord NX = GzCoord(1, 1, -(N[0] + N[1]) / N[2]);
+	normalize(NX);
+	GzCoord NY = cross(N, NX);
+	normalize(NY);
+
+	GzCoord diffuseDir = NX * cos(r1) * sin(r2) + NY * sin(r1) * sin(r2) + N * cos(r2);
+	Normalize(diffuseDir);
+	GzRay diffuseRay = GzRay(intersection, diffuseDir);
+	// Color of incoming light for diffuse
+	VectorCoord diffuseRayColor = emitLight(diffuseRay, depth + 1);
+	// Color of outgoing light for diffuse, le * (N dot L)
+	VectorCoord diffuseColor = diffuseRayColor * dot(N, diffuseDir);
+
 	VectorCoord totalColor = VectorCoord();
 	for (int i = 0; i < 3; i++)
 	{
-		totalColor.push_back(reflectRatio * reflectedColor[i] + refractRatio * refractedColor[i]);
+		totalColor.push_back(reflectRatio * reflectedColor[i] + refractRatio * refractedColor[i] + kd * diffuseColor);
 	}
 
 	return totalColor;
@@ -943,11 +961,19 @@ VectorCoord emitLight(GzRay ray, int depth) {
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
     if (depth >= maxDepth)
         return VectorCoord(0, 0, 0); 
-    // Todo v2: light source for the final color.
+    // Light source for the final color.
     // 1. Define the radius of the light source.
     // 2. Do the collision detection by CollisionWithSphere.
     // 3. Set the light source color.    One white light and one color light.
-    // 
+	GzSphere[3] lightSources;	// TODO: Make up param, need to move to rend.h later
+	for (GzSphere sp : lightSources)
+	{
+		double dist_placeholder;
+		if (RayIntersectsSphere(ray.startPoint, ray.direction, sp.position, sp.radius, dist_placeholder))
+		{
+			return (VectorCoord)sp.color_diffuse;
+		}
+	}
     // The overall color is a combination of the color computed from the Phong model and the color of the reflection
     //VectorCoord color = localColor + reflectedColor * 0.8;
     
