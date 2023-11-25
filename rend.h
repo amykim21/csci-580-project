@@ -17,6 +17,8 @@
 #define	MATLEVELS	100		/* how many matrix pushes allowed */
 #define	MAX_LIGHTS	10		/* how many lights allowed */
 #define	MAX_TRIANGLES	10000		/* how many triangles allowed */
+#define	MAX_SPHERES	10
+
 class GzRender{			/* define a renderer */
   
 
@@ -38,11 +40,17 @@ public:
 	int			numlights;
 	int			numTriangles;
 	GzLight		lights[MAX_LIGHTS];
+
+
+	GzSphere lightSources[3];	// TODO: Make up param, need to move to rend.h later
+	GzSphere	spheres[MAX_SPHERES];
+
+
 	GzLight		ambientlight;
 	GzColor		Ka, Kd, Ks;
 	float		    spec;		/* specular power */
 	GzTexture		tex_fun;    /* tex_fun(float u, float v, GzColor color) */
-	void RayTrace();
+	
   	// Constructors
 	GzRender(int xRes, int yRes);
 	~GzRender();
@@ -60,14 +68,14 @@ public:
 
 	// HW2: Render methods
 	int GzPutAttribute(int numAttributes, GzToken *nameList, GzPointer *valueList);
-	int GzPutTriangle(int numParts, GzToken *nameList, GzPointer *valueList);
+	int GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueList);
 
 	// HW3
 	int GzPutCamera(GzCamera camera);
 	int GzPushMatrix(GzMatrix	matrix);
 	int GzPopMatrix();
 	
-	bool isInShadow(GzVertex intersection, GzLight light);
+	//bool isInShadow(GzVertex intersection, GzLight light);
 	// Extra methods: NOT part of API - just for general assistance */
 	inline int ARRAY(int x, int y){return (x+y*xres);}	/* simplify fbuf indexing */
 	inline short	ctoi(float color) {return(short)((int)(color * ((1 << 12) - 1)));}		/* convert float color to GzIntensity short */
@@ -80,8 +88,15 @@ public:
 	int GzTrxMat(GzCoord translate, GzMatrix mat);
 	int GzScaleMat(GzCoord scale, GzMatrix mat);
 
-	VectorCoord FresnelReflection(GzRay light, VectorCoord intersection, GzTriangle triangle, int depth);
-	bool GzCollisionWithTriangle(GzLight light, int& index);
-	bool GzCollisionWithSpecificTriangle(GzLight light, GzTriangle triangle, double intersectPos[3]);
+	void RayTrace();
+
+	GzVector3D FresnelReflection(GzRay light, GzVertex intersection, GzTriangle triangle, int depth);
+	GzVector3D EmitLight(GzRay ray, int depth);
+	bool GzCollisionWithTriangle(GzRay light, int& index);
+	bool GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D intersectPos);
+
+	bool RayIntersectsSphere(const double origin[3], const double direction[3], const double center[3], double radius, double& t);
+	bool GzCollisionWithSphere(GzRay light, int& index);
+	void CalculateSphereReflectionAndRefraction(GzRay light, GzSphere sphere, const double intersectionPoint[3], GzRay& reflectLight, GzRay& refractLight);
 };
 #endif

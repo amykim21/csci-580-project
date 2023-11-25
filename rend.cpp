@@ -5,17 +5,26 @@
 #include	"stdio.h"
 #include	"math.h"
 #include	"Gz.h"
-#include	"rend.h"
-
 #include <algorithm>
 #include <vector>
 #include <cmath>
+#include <stdlib.h> 
+#include <limits>
+#include <cfloat>
+
+#include	"rend.h"
 
 #define PI (float) 3.14159265358979323846
 #define DEG2RAD(degree) ((degree) * (PI / 180.0))
 typedef std::vector<float> VectorCoord;
 typedef std::vector<std::vector<float>> VectorMatrix;
 
+/*
+BSPTree bspTree;
+bspTree.root = bspTree.buildTree(sceneObjects);
+float closestDistance = std::numeric_limits<float>::infinity();
+Object* closestObject = bspTree.traverse(ray, bspTree.root, closestDistance);
+*/
 int GzRender::GzRotXMat(float degree, GzMatrix mat)
 {
 	/* HW 3.1
@@ -133,7 +142,7 @@ int GzRender::GzScaleMat(GzCoord scale, GzMatrix mat)
 	mat[1][0] = 0.0f;      mat[1][1] = scale[1];  mat[1][2] = 0.0f;      mat[1][3] = 0.0f;
 	mat[2][0] = 0.0f;      mat[2][1] = 0.0f;      mat[2][2] = scale[2];  mat[2][3] = 0.0f;
 	mat[3][0] = 0.0f;      mat[3][1] = 0.0f;      mat[3][2] = 0.0f;      mat[3][3] = 1.0f;
-
+	
 
 	return GZ_SUCCESS;
 }
@@ -187,12 +196,15 @@ int GzRender::GzDefault()
 		pixelbuffer[i] = { 128 << 4, 112 << 4, 96 << 4, 1,MAXINT };
 	return GZ_SUCCESS;
 }
+
 float norm(VectorCoord v) {
 	return sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
+
 float norm(GzCoord v) {
 	return sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
 }
+
 VectorCoord normalize(VectorCoord v) {
 	float len = norm(v);
 	VectorCoord result = {
@@ -202,6 +214,7 @@ VectorCoord normalize(VectorCoord v) {
 	};
 	return result;
 }
+
 VectorCoord normalize(GzCoord v) {
 	float len = norm(v);
 	VectorCoord result = {
@@ -211,16 +224,19 @@ VectorCoord normalize(GzCoord v) {
 	};
 	return result;
 }
-// dot�������ڼ������������ĵ��
+
 float dot(VectorCoord v1, VectorCoord v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
+
 float dot(GzCoord v1, GzCoord v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
+
 float dot(VectorCoord v1, GzCoord v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
+
 VectorCoord multiply(float v1, VectorCoord v2) {
 	VectorCoord result = {
 		v1 * v2[0],
@@ -230,7 +246,6 @@ VectorCoord multiply(float v1, VectorCoord v2) {
 	return result;
 }
 
-// cross�������ڼ������������Ĳ��
 VectorCoord cross(VectorCoord v1, VectorCoord v2) {
 	VectorCoord result = {
 		v1[1] * v2[2] - v1[2] * v2[1],
@@ -248,7 +263,7 @@ VectorCoord decreaseCoord(VectorCoord v1, VectorCoord v2) {
 	};
 	return result;
 }
-// �������
+
 VectorMatrix multiplyMatrix(VectorMatrix m1, VectorMatrix m2) {
 	VectorMatrix result(4, std::vector<float>(4, 0));
 	for (int i = 0; i < 4; ++i) {
@@ -262,8 +277,6 @@ VectorMatrix multiplyMatrix(VectorMatrix m1, VectorMatrix m2) {
 	return result;
 }
 
-
-
 int GzRender::GzBeginRender()
 {
 	/* HW 3.7
@@ -275,7 +288,6 @@ int GzRender::GzBeginRender()
 
 	VectorCoord camDir, camRight, camUp;
 
-	// ����Camera������
 
 	VectorCoord vecLookAt(m_camera.lookat, m_camera.lookat + sizeof m_camera.lookat / sizeof m_camera.lookat[0]);
 	VectorCoord vecPosition(m_camera.position, m_camera.position + sizeof m_camera.position / sizeof m_camera.position[0]);
@@ -284,7 +296,6 @@ int GzRender::GzBeginRender()
 	camRight = normalize(cross(vecWorldup, camDir));
 	camUp = normalize(decreaseCoord(vecWorldup, multiply(dot(vecWorldup, camDir), camDir)));
 
-	// ���� Xiw
 	float XiwData0[4][4] = {
 		{camRight[X], camRight[Y], camRight[Z],0},
 		{camUp[X], camUp[Y], camUp[Z], 0},
@@ -306,7 +317,6 @@ int GzRender::GzBeginRender()
 	//	}
 	//}
 
-	// ���� Xpi
 	float d = tan((m_camera.FOV / 2) * (PI / 180));
 	float XpiData[4][4] = {
 		{1, 0, 0, 0},
@@ -320,7 +330,7 @@ int GzRender::GzBeginRender()
 	//		Xpi[i][j] = XpiData[i][j];
 	//	}
 	//}
-	// ���� Xsp
+
 	float XspData[4][4] = {
 		{xres * 0.5, 0, 0, xres * 0.5},
 		{0, -yres * 0.5, 0, yres * 0.5},
@@ -338,10 +348,9 @@ int GzRender::GzBeginRender()
 	//		Xsp0[i][j] = XspData[i][j];
 	//	}
 	//}
-	// ���� Xsw
+
 	//VectorMatrix Xsw = multiplyMatrix(multiplyMatrix(Xsp0, Xpi), Xiw);
 
-	// ���ۺ�ʱ Xsw ������ stack �ĵײ�
 	matlevel = -1;
 	//GzMatrix floatXsw = {
 	//	{Xsw[0][0],Xsw[0][1],Xsw[0][2],Xsw[0][3]},
@@ -530,62 +539,62 @@ int GzRender::GzFlushDisplay2FrameBuffer()
 int GzRender::GzPutAttribute(int numAttributes, GzToken* nameList, GzPointer* valueList) {
 	for (int i = 0; i < numAttributes; i++) {
 		switch (nameList[i]) {
-		case GZ_RGB_COLOR: {
-			GzColor* color = (GzColor*)valueList[i];
-			this->flatcolor[RED] = (*color)[RED];
-			this->flatcolor[GREEN] = (*color)[GREEN];
-			this->flatcolor[BLUE] = (*color)[BLUE];
-			break;
-		}
-		case GZ_INTERPOLATE: {
-			int* mode = (int*)valueList[i];
-			this->interp_mode = *mode;
-			break;
-		}
-		case GZ_DIRECTIONAL_LIGHT: {
-			if (this->numlights < MAX_LIGHTS) {
-				GzLight* light = (GzLight*)valueList[i];
-				this->lights[this->numlights] = *light;
-				this->numlights++;
+			case GZ_RGB_COLOR: {
+				GzColor* color = (GzColor*)valueList[i];
+				this->flatcolor[RED] = (*color)[RED];
+				this->flatcolor[GREEN] = (*color)[GREEN];
+				this->flatcolor[BLUE] = (*color)[BLUE];
+				break;
 			}
-			break;
-		}
-		case GZ_AMBIENT_LIGHT: {
-			GzLight* ambient = (GzLight*)valueList[i];
-			this->ambientlight = *ambient;
-			break;
-		}
-		case GZ_AMBIENT_COEFFICIENT: {
-			GzColor* ka = (GzColor*)valueList[i];
-			Ka[RED] = (*ka)[RED];
-			Ka[GREEN] = (*ka)[GREEN];
-			Ka[BLUE] = (*ka)[BLUE];
-			break;
-		}
-		case GZ_DIFFUSE_COEFFICIENT: {
-			GzColor* kd = (GzColor*)valueList[i];
-			Kd[RED] = (*kd)[RED];
-			Kd[GREEN] = (*kd)[GREEN];
-			Kd[BLUE] = (*kd)[BLUE];
-			break;
-		}
-		case GZ_SPECULAR_COEFFICIENT: {
-			GzColor* ks = (GzColor*)valueList[i];
-			Ks[RED] = (*ks)[RED];
-			Ks[GREEN] = (*ks)[GREEN];
-			Ks[BLUE] = (*ks)[BLUE];
-			break;
-		}
-		case GZ_DISTRIBUTION_COEFFICIENT: {
-			float* sp = (float*)valueList[i];
-			this->spec = *sp;
-			break;
-		}
-		case GZ_TEXTURE_MAP: {
-			GzTexture sp = (GzTexture)valueList[i];
-			this->tex_fun = sp;
-			break;
-		}							// �ڴ˴����������Ӹ����������ô���
+			case GZ_INTERPOLATE: {
+				int* mode = (int*)valueList[i];
+				this->interp_mode = *mode;
+				break;
+			}
+			case GZ_DIRECTIONAL_LIGHT: {
+				if (this->numlights < MAX_LIGHTS) {
+					GzLight* light = (GzLight*)valueList[i];
+					this->lights[this->numlights] = *light;
+					this->numlights++;
+				}
+				break;
+			}
+			case GZ_AMBIENT_LIGHT: {
+				GzLight* ambient = (GzLight*)valueList[i];
+				this->ambientlight = *ambient;
+				break;
+			}
+			case GZ_AMBIENT_COEFFICIENT: {
+				GzColor* ka = (GzColor*)valueList[i];
+				Ka[RED] = (*ka)[RED];
+				Ka[GREEN] = (*ka)[GREEN];
+				Ka[BLUE] = (*ka)[BLUE];
+				break;
+			}
+			case GZ_DIFFUSE_COEFFICIENT: {
+				GzColor* kd = (GzColor*)valueList[i];
+				Kd[RED] = (*kd)[RED];
+				Kd[GREEN] = (*kd)[GREEN];
+				Kd[BLUE] = (*kd)[BLUE];
+				break;
+			}
+			case GZ_SPECULAR_COEFFICIENT: {
+				GzColor* ks = (GzColor*)valueList[i];
+				Ks[RED] = (*ks)[RED];
+				Ks[GREEN] = (*ks)[GREEN];
+				Ks[BLUE] = (*ks)[BLUE];
+				break;
+			}
+			case GZ_DISTRIBUTION_COEFFICIENT: {
+				float* sp = (float*)valueList[i];
+				this->spec = *sp;
+				break;
+			}
+			case GZ_TEXTURE_MAP: {
+				GzTexture sp = (GzTexture)valueList[i];
+				this->tex_fun = sp;
+				break;
+			}
 		}
 	}
 	return GZ_SUCCESS;
@@ -594,6 +603,7 @@ int GzRender::GzPutAttribute(int numAttributes, GzToken* nameList, GzPointer* va
 float interpolate(float a, float b, float t) {
 	return a + t * (b - a);
 }
+
 VectorCoord interpolateColor(GzColor v1, GzColor v2, float t)
 {
 	VectorCoord result(3);
@@ -605,6 +615,7 @@ VectorCoord interpolateColor(GzColor v1, GzColor v2, float t)
 
 	return result;
 }
+
 VectorCoord interpolateColor(VectorCoord v1, VectorCoord v2, float t)
 {
 	VectorCoord result(3);
@@ -616,6 +627,7 @@ VectorCoord interpolateColor(VectorCoord v1, VectorCoord v2, float t)
 
 	return result;
 }
+
 VectorCoord interpolateTextureColor(VectorCoord v1, VectorCoord v2, float t)
 {
 	VectorCoord result(2);
@@ -657,6 +669,7 @@ GzVertex getTriangleNormal(GzTriangle triangle, GzVertex intersection) {
     return normal;
 }
 
+/**
 // if we don't use Phong model, then isInShadow is not needed because recursion can also produce shadow
 bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 
@@ -668,9 +681,9 @@ bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 
 	
 	for (int i = 0; i < numTriangles; i++) {
-		double t; // 
+		int t; // 
 		//
-		bool collision = GzCollisionWithTriangle(shadowRay, triangles[i], &t);
+		bool collision = GzCollisionWithSpecificTriangle(shadowRay, triangles[i], t);
 
 		// 
 		// 
@@ -682,80 +695,22 @@ bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 	// 
 	return false;
 }
-
-VectorCoord getBackgroundColor(GzRay ray) {
-	// TODO
-}
+*/
 
 void GzRender::RayTrace(){
 	float d = tan((m_camera.FOV / 2) * (PI / 180));
 	float aspect_ratio = 1.0 * xres / yres;
-	for(int i =0;i<xres;i++){
-		for(int j =0;j<yres;j++){
+	for(int i = 0; i < xres; i++) {
+		for(int j = 0; j < yres; j++) {
 			float x = (2 * (i + 0.5) / xres - 1) * d * aspect_ratio;
-				
 			float y = (1 - 2 * (j + 0.5) / yres) * d;
-			VectorCoord color = emitLight(GzRay(GzVertex(0,0,-1),GzVertex(x,y,1)));
+			GzVector3D color = EmitLight(GzRay(GzVector3D(0, 0, -1), GzVector3D(x, y, 1)), 1);
+
+			GzDepth z = 0;
 			GzPut(i, j, ctoi(color[RED]), ctoi(color[GREEN]), ctoi(color[BLUE]), 1, z);
 		}
 	}
 		
-}
-VectorCoord phongModel(GzRay ray, Intersection intersection, GzLight light){
-    // Acquire light position, object position and viewpoint position.
-    VectorCoord light_pos = light.position;
-    VectorCoord obj_pos = intersection.position;
-    VectorCoord view_pos = ray.origin;
-
-    // The vector from the surface to light source (normalized) and the vector from the surface to viewer (normalized)
-    VectorCoord light_vec = normalize(light_pos - obj_pos);
-    VectorCoord view_vec = normalize(view_pos - obj_pos);
-
-    // Compute reflection vector
-    VectorCoord reflect_vec = reflect(negate(light_vec), intersection.normal);
-   // Calculate L (light direction), N (normal), R (reflected light direction), and V (view direction)
-    double L[3] = { light.position[0] - intersection.position[0],
-                    light.position[1] - intersection.position[1],
-                    light.position[2] - intersection.position[2] };
-    normalize(L);
-
-    double N[3] = { intersection.normal[0],
-                    intersection.normal[1],
-                    intersection.normal[2] };
-    normalize(N);
-
-    double R[3] = { 2.0 * dot_product(N, L) * N[0] - L[0],
-                    2.0 * dot_product(N, L) * N[1] - L[1],
-                    2.0 * dot_product(N, L) * N[2] - L[2] };
-    normalize(R);
-
-    double V[3] = { camera_pos[0] - intersection.position[0],
-                    camera_pos[1] - intersection.position[1],
-                    camera_pos[2] - intersection.position[2] };
-    normalize(V);
-
-    // Calculate Phong shading components: diffuse and specular
-    double diffuse = clamp(dot_product(L, N), 0.0, 1.0);
-    double specular = clamp(pow(clamp(dot_product(R, V), 0.0, 1.0), vertex.shininess), 0.0, 1.0);
-    // Initialize color with ambient light
-    VectorCoord color = Ka * light.color;
-
-    // Compute the diffuse part
-    VectorCoord diff = Kd * light.color * std::max(dotProduct(intersection.normal, light_vec), 0.0);
-
-    // Compute specular part
-    VectorCoord spec = Ks * light.color * pow(dotProduct(reflect_vec, view_vec), spec);
-
-    // If the object is in shadow, set the diffuse and specular part to 0
-    if (isInShadow(intersection, light)) {
-        diff = VectorCoord(0, 0, 0);
-        spec = VectorCoord(0, 0, 0);
-    }
-
-    // Total color is the sum of the ambient, diffuse and specular color
-    color += (diff + spec);
-
-    return color;
 }
 
 /**
@@ -767,547 +722,130 @@ VectorCoord phongModel(GzRay ray, Intersection intersection, GzLight light){
  * @param depth Recursive depth
  * @return The total color(from reflect, refract, etc) generated by this Fresnel reflection
  */
-VectorCoord GzRender::FresnelReflection(GzRay light, VectorCoord intersection, GzTriangle triangle, int depth)
+GzVector3D GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTriangle triangle, int depth)
 {
 	// Equation source: An improved illumination model for shaded display, Sec 2 Improved model
 	// The total light color will be: (ambient color) + kd * (sum of diffuse lights) + ks * (reflect light, also known as specular) + kt * (refract light)
 
-	GzVertex N = getTriangleNormal(triangle, intersection);	// Compute normal at intersection point
-	normalize(N);
+	GzVertex N_vertex = getTriangleNormal(triangle, intersection);	// Compute normal vector at intersection point
+	GzVector3D normal = GzVector3D(N_vertex.normal);
+	GzVector3D intersection_pos = GzVector3D(intersection.position);
 	float n_air = 1; // Refractive index of air, 1.0003
 	float n1, n2;	// (Incoming n1), (refracting n2) for the refractive index
 
 	// If dot of normal and light are positive, then the light comes from air(same direction)
-	if (dot(light.direction, N) > 0)
+	GzVector3D lightDir = GzVector3D(light.direction);
+
+	if (lightDir * normal > 0)
 	{
 		// Then air will be incoming n1, the material will be refract n2
 		n1 = n_air;
-		n2 = triangle.refract_index;
+		n2 = triangle.v[0].refract_index;
 	}
 	else
 	{
 		// Then material will be incoming n, the air will be refract n
-		n1 = triangle.refract_index;
+		n1 = triangle.v[0].refract_index;
 		n2 = n_air;
 	}
 
 	// Get cos & sin of incoming light vector and normal vector
-	float cos_incoming = dot(light.direction, N);
+	float cos_incoming = lightDir * normal;
 	float sin_incoming = sqrt(1 - pow(cos_incoming, 2));	// sin2 + cos2 = 1
 
-	// Compute s and p polarization of reflection
-	float inner_sqrt = sqrt(1 - pow(n1 / n2 * sin_incoming, 2));
-	float reflect_s_polar_sqrt = (n1 * cos_incoming - n2 * inner_sqrt) / (n1 * cos_incoming + n2 * inner_sqrt);
-	float reflect_p_polar_sqrt = (n1 * inner_sqrt - n2 * cos_incoming) / (n1 * inner_sqrt + n2 * cos_incoming);
-	float reflect_s_polar = pow(reflect_s_polar_sqrt, 2);
-	float reflect_p_polar = pow(reflect_p_polar_sqrt, 2);
+	// Compute Directions
+	GzVector3D reflectDir = lightDir - 2 * normal * cos_incoming;	// Reflect = L - 2(L dot N)N
+	float sin_refracting = (n1 / n2) * sin_incoming;	// n1 * sin_incoming = n2 * sin_refracting
+	float cos_refracting = sqrt(1 - pow(sin_refracting, 2));	// sin2 + cos2 = 1
+	// Calculate the incoming light's vector portion that is perpendicular to normal, which call tangent vector
+	GzVector3D tangentVec = (lightDir - cos_incoming * normal) / sin_incoming;	// Tangent vector portion of incoming light
+	// Convert tangent vector into refract light direction
+	GzVector3D refractDir = tangentVec * sin_refracting - normal * cos_refracting;
+
+
+	// Schlick’s model
+	float r0 = pow(n1 - n2, 2) / pow(n1 + n2, 2);
 
 	// Get Reflect and Refract ratio
-	float reflectRatio = (reflect_s_polar + reflect_p_polar) / 2.0;
+	float reflectRatio = r0 + (1 - r0) * (1 - cos_incoming);
 	float refractRatio = 1 - reflectRatio;
 
 
-	// Compute Directions
-	VectorCoord reflectDir = light.direction - 2 * cos_incoming * N;	// Reflect = L - 2(L dot N)N
-
-	float sin_refracting = (n1 / n2) * sin_incoming;	// n1 * sin_incoming = n2 * sin_refracting
-	float cos_refracting = sqrt(1 - pow(sin_refracting, 2));	//sin2 + cos2 = 1
-
-	// Calculate the incoming light's vector portion that is perpendicular to normal, which call tangent vector
-	VectorCoord tangentVec = (light.direction - cos_incoming * N) / sin_incoming;	// Tangent vector portion of incoming light
-	// Convert tangent vector into refract light direction
-	VectorCoord refractDir = tangentVec * sin_refracting - N * cos_refracting;
-
-
 	// Compute Rays
-	GzRay reflectedRay = GzRay(intersection, reflectDir);
-	GzRay refractedRay = GzRay(intersection, refractDir);
+	GzRay reflectedRay = GzRay(intersection_pos, reflectDir);
+	GzRay refractedRay = GzRay(intersection_pos, refractDir);
 
 	// Calculate the color of the reflection
-	VectorCoord reflectedColor = emitLight(reflectedRay, depth + 1);
-	VectorCoord refractedColor = emitLight(refractedRay, depth + 1);
-
+	GzVector3D reflectedColor = EmitLight(reflectedRay, depth + 1);
+	GzVector3D refractedColor = EmitLight(refractedRay, depth + 1);
 
 	// Compute total color
 	// TODO: Diffuse color formula undecided
-	VectorCoord totalColor = VectorCoord();
-	for (int i = 0; i < 3; i++)
-	{
-		totalColor.push_back(reflectRatio * reflectedColor[i] + refractRatio * refractedColor[i]);
-	}
+	float r1 = (rand() / (float)RAND_MAX) * 2 * PI;	// Rand samples fron 0 to RAND_MAX, scale it to 2 pi
+	float r2 = (rand() / (float)RAND_MAX) * PI / 2;	// vertical angle from 0 to pi / 2
+
+	// N is normal to the current point, we need to find the x y plane perpendicular to it
+	GzVector3D NX = GzVector3D(1, 1, -(normal[0] + normal[1]) / normal[2]).normalized();
+	GzVector3D NY = (normal ^ NX).normalized();
+
+	GzVector3D diffuseDir = (NX * cos(r1) * sin(r2) + NY * sin(r1) * sin(r2) + normal * cos(r2)).normalized();
+	GzRay diffuseRay = GzRay(intersection_pos, diffuseDir);
+
+	// Color of incoming light for diffuse
+	GzVector3D diffuseRayColor = EmitLight(diffuseRay, depth + 1);
+	// Color of outgoing light for diffuse, le * (N dot L)
+	// Total color
+	GzVector3D diffuseColor = /**Kd * */diffuseRayColor * (normal * diffuseDir);
+	GzVector3D totalColor = reflectRatio * reflectedColor + refractRatio * refractedColor + diffuseColor;
 
 	return totalColor;
 }
 
-VectorCoord emitLight(GzRay ray, int depth) {
+GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
+{
 	int maxDepth = 5;
-    VectorCoord normDirection = normalize(ray.direction);
+	GzVector3D normDirection = GzVector3D(ray.direction).normalized();
 	// Check the intersection between the light beam and objects in the scene
-    VectorCoord intersection; // intersection point between ray and object?
+	GzVertex intersection; // intersection point between ray and object?
 	GzTriangle collidedTriangle; // The intersecting triangle(collision)
     //Ray intersection;
 	// intersect either sphere or triangle
-    if (!intersectObject(/*ray, intersection*/)) { // TODO: negotiate how to call intersectScene (Kevin)
-        return getBackgroundColor(); // just black is ok
+	int index;
+
+	// TODO: negotiate how to call intersectScene (Kevin)
+    if (!GzCollisionWithTriangle(ray, index)/*intersectObject(ray, intersection)*/) 
+	{ 
+        return GzVector3D(0, 0, 0); // just black is ok
     }
 
 	//GzVertex normal = getTriangleNormal(*intersectedTriangle, );
 
 	// Calculate the color based on the Phong model
     //VectorCoord localColor = phongModel(Ray(startPoint, direction), hit);
-	VectorCoord localColor = FresnelReflection(ray, intersection, collidedTriangle, depth);
+	GzVector3D localColor = FresnelReflection(ray, intersection, triangles[index], depth);
 
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
-    if (depth >= maxDepth)
-        return localColor;
-
+	if (depth >= maxDepth)
+	{
+		return GzVector3D(0, 0, 0);
+	}
+    // Light source for the final color.
+    // 1. Define the radius of the light source.
+    // 2. Do the collision detection by CollisionWithSphere.
+    // 3. Set the light source color.    One white light and one color light.
+	
+	for (GzSphere sp : lightSources)
+	{
+		double dist_placeholder;
+		if (RayIntersectsSphere(ray.startPoint.GetDoubleArr(), ray.direction.GetDoubleArr(), sp.position, sp.radius, dist_placeholder))
+		{
+			return GzVector3D(sp.color_diffuse);
+		}
+	}
     // The overall color is a combination of the color computed from the Phong model and the color of the reflection
     //VectorCoord color = localColor + reflectedColor * 0.8;
     
-    return color;
-}
-
-int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueList)
-/* numParts - how many names and values */
-{
-	/* HW 2.2
-	-- Pass in a triangle description with tokens and values corresponding to
-		  GZ_NULL_TOKEN:		do nothing - no values
-		  GZ_POSITION:		3 vert positions in model space
-	-- Invoke the rastrizer/scanline framework
-	-- Return error code
-	*/
-	GzCoord* vertices = NULL;
-	GzCoord* normals = NULL;
-	GzTextureIndex* uvlist = NULL;
-	for (int i = 0; i < numParts; i++) {
-		if (nameList[i] == GZ_POSITION) {
-			vertices = static_cast<GzCoord*>(valueList[i]);
-		}
-		else if (nameList[i] == GZ_NORMAL) {
-				normals = static_cast<GzCoord*>(valueList[i]);
-			}
-		else if (nameList[i] == GZ_TEXTURE_INDEX) {
-			uvlist = static_cast<GzTextureIndex*>(valueList[i]);
-		}
-	}
-
-
-
-	if (vertices != NULL) {
-	// Sort vertices by y
-	std::vector<std::vector<float>> verticesVec, normalVec, UVlistVec;
-	std::vector<std::vector<float>> outputVec(3, std::vector<float>(3));
-	// Add each GzCoord to the vector
-	for (int i = 0; i < 3; ++i)
-	{
-		verticesVec.push_back(std::vector<float>(vertices[i], vertices[i] + 3));
-		normalVec.push_back(std::vector<float>(normals[i], normals[i] + 3));
-		UVlistVec.push_back(std::vector<float>(uvlist[i], uvlist[i] + 2));
-	}
-	for (int count = matlevel; count >= 2; count--) {
-		GzMatrix& matrix = Ximage[count];
-		GzMatrix& Xn = Xnorm[count];
-		for (int h = 0; h < 3; ++h) {
-			std::vector<float> resultVec0(4);  // ������� ��ʼֵΪ0
-			std::vector<float> resultVec1(4);  // ������� ��ʼֵΪ0
-			verticesVec[h].push_back(1.0);  // ��չ��4D����
-			normalVec[h].push_back(1.0);
-			for (int j = 0; j < 4; ++j) {
-				for (int k = 0; k < 4; ++k) {
-					resultVec0[j] += matrix[j][k] * verticesVec[h][k];
-					resultVec1[j] += Xn[j][k] * normalVec[h][k];
-				}
-			}
-			verticesVec[h].pop_back();
-			normalVec[h].pop_back();
-			verticesVec[h][0] = resultVec0[0] / resultVec0[3];
-			verticesVec[h][1] = resultVec0[1] / resultVec0[3];
-			verticesVec[h][2] = resultVec0[2] / resultVec0[3];
-			normalVec[h][0] = resultVec1[0] / resultVec1[3];
-			normalVec[h][1] = resultVec1[1] / resultVec1[3];
-			normalVec[h][2] = resultVec1[2] / resultVec1[3];
-			if (count == 2 && verticesVec[h][2] < 0) {
-				return GZ_FAILURE;
-			}
-		}
-	}
-	for (int i = 0; i < 3; i++) {
-		for (int j = 0; j < 3; j++) {
-			vertices[i][j] = verticesVec[i][j];
-			normals[i][j] = normalVec[i][j];
-			
-		}
-	}
-	if (vertices != nullptr && normals != nullptr && numTriangles < MAX_TRIANGLES) {
-		for (int i = 0; i < 3; i++) {
-			GzVertex v(vertices[i], normals[i]);
-			triangles[numTriangles] = GzTriangle(v, v, v);
-			numTriangles++;
-		}
-	}
-
-
-
-
-
-	//float d= 1.0/tan((m_camera.FOV / 2) * (PI / 180));
-	//if (vertices != NULL) {
-	//	// Sort vertices by y
-	//	std::vector<std::vector<float>> verticesVec, normalVec, UVlistVec;
-	//	std::vector<std::vector<float>> outputVec(3, std::vector<float>(3));
-	//	// Add each GzCoord to the vector
-	//	for (int i = 0; i < 3; ++i)
-	//	{
-	//		verticesVec.push_back(std::vector<float>(vertices[i], vertices[i] + 3));
-	//		normalVec.push_back(std::vector<float>(normals[i], normals[i] + 3));
-	//		UVlistVec.push_back(std::vector<float>(uvlist[i], uvlist[i] + 2));
-	//	}
-	//	for (int count = matlevel; count >= 0; count--) {
-	//		GzMatrix& matrix = Ximage[count];
-	//		GzMatrix& Xn = Xnorm[count];
-	//		for (int h = 0; h < 3; ++h) {
-	//			std::vector<float> resultVec0(4);  // ������� ��ʼֵΪ0
-	//			std::vector<float> resultVec1(4);  // ������� ��ʼֵΪ0
-	//			verticesVec[h].push_back(1.0);  // ��չ��4D����
-	//			normalVec[h].push_back(1.0);
-	//			for (int j = 0; j < 4; ++j) {
-	//				for (int k = 0; k < 4; ++k) {
-	//					resultVec0[j] += matrix[j][k] * verticesVec[h][k];
-	//					resultVec1[j] += Xn[j][k] * normalVec[h][k];
-	//				}
-	//			}
-	//			verticesVec[h].pop_back();
-	//			normalVec[h].pop_back();
-	//			verticesVec[h][0] = resultVec0[0] / resultVec0[3];
-	//			verticesVec[h][1] = resultVec0[1] / resultVec0[3];
-	//			verticesVec[h][2] = resultVec0[2] / resultVec0[3];
-	//			normalVec[h][0] = resultVec1[0] / resultVec1[3];
-	//			normalVec[h][1] = resultVec1[1] / resultVec1[3];
-	//			normalVec[h][2] = resultVec1[2] / resultVec1[3];
-	//			if (count == 2 && verticesVec[h][2] < 0) {
-	//				return GZ_FAILURE;
-	//			}
-	//		}
-	//	}
-
-
-
-	//	// Pair each vertex with its corresponding index
-	//	std::vector<std::pair<std::vector<float>, int>> indexedVertices;
-	//	for (size_t i = 0; i < verticesVec.size(); ++i)
-	//		indexedVertices.push_back({ verticesVec[i], i });
-
-	//	// Sort vertices by y, preserving original indices
-	//	std::sort(indexedVertices.begin(), indexedVertices.end(), [](const auto& a, const auto& b) {return a.first[Y] < b.first[Y]; });
-
-	//	// Rearrange verticesVec and normalVec in the sorted order
-	//	std::vector<std::vector<float>> sortedVerticesVec, sortedNormalVec,sortedUVlistVec;
-	//	int firstIndex = -1, indexCount = 0;
-	//	for (const auto& pair : indexedVertices)
-	//	{
-	//		//firstIndex++;
-	//		if (pair.second == 0) {
-	//			firstIndex = indexCount;
-	//		}
-	//		sortedVerticesVec.push_back(pair.first);
-	//		sortedNormalVec.push_back(normalVec[pair.second]);
-	//		sortedUVlistVec.push_back(UVlistVec[pair.second]);
-	//		indexCount++;
-
-	//	}
-
-	//	verticesVec = sortedVerticesVec;
-	//	normalVec = sortedNormalVec;
-	//	UVlistVec = sortedUVlistVec;
-	//	for (int i = 0; i < 3; i++) {
-	//		for (int j = 0; j < 3; j++) {
-	//			vertices[i][j] = verticesVec[i][j];
-	//			normals[i][j] = normalVec[i][j];
-	//			
-	//		}
-	//		for (int j = 0; j < 2; j++) {
-	//			
-	//			uvlist[i][j] = UVlistVec[i][j];
-	//		}
-
-
-	//	}
-	//	GzColor textureColor;
-
-	//	for (int i = 0; i < 3; ++i) {
-	//		float z = vertices[i][2];
-	//		float VZ = z / (INT_MAX - z);
-	//		float adjustZ = (VZ + 1);
-	//		UVlistVec[i][0] = UVlistVec[i][0] / adjustZ; // (10)
-	//		UVlistVec[i][1] = UVlistVec[i][1] / adjustZ;
-	//	}
-	//	GzCoord viewDirection = { 0.0f, 0.0f, -1.0f };  // The direction of the eye
-	//	GzColor* vecColor = new GzColor[3];  // Reset the color for each light
-	//	for (int i = 0; i < 3; ++i) {  // Loop for each vertex
-	//
-	//		GzCoord currNormalVec;
-	//		for (int j = 0; j < 3; ++j) {
-	//			vecColor[i][j] = 0.0f;
-	//		}
-	//		for (int j = 0; j < 3; j++) {
-	//			currNormalVec[j] = normals[i][j];
-	//		}
-	//		//GzColor color = { 0.0f, 0.0f, 0.0f };  // Reset the color for each light
-	//		for (int j = 0; j < numlights; ++j) {
-	//			GzLight light = lights[j];
-
-	//			float dotProductNormLight = dot(currNormalVec, light.direction);
-	//			float dotProductNormView = dot(currNormalVec, viewDirection);
-	//			if (dotProductNormLight < 0 && dotProductNormView < 0) {
-	//				// flip normal vector if dot product under zero
-	//				currNormalVec[0] = -currNormalVec[0];
-	//				currNormalVec[1] = -currNormalVec[1];
-	//				currNormalVec[2] = -currNormalVec[2];
-	//				dotProductNormLight = -dotProductNormLight;
-	//			}
-	//			else if (dotProductNormLight * dotProductNormView < 0) {
-	//				// light and eye are on different sides of the surface, skip this light
-	//				continue;
-	//			}
-	//			// Calculate the diffuse light
-	//			/*float dotProduct = max(0.0f, dot(currNormalVec, light.direction));*/
-	//			GzColor diffuseLight;
-	//			// Calculate the diffuse light
-	//			for (int k = 0; k < 3; k++) {
-	//				diffuseLight[k] = Kd[k] * light.color[k] * dotProductNormLight;  // Apply Kd, color and dotProduct element-wise
-	//			}
-
-	//			// Calculate the specular light
-	//			GzCoord reflection = { 0.0f, 0.0f, 0.0f };
-	//			for (int k = 0; k < 3; k++) {
-	//				reflection[k] = 2 * dotProductNormLight * currNormalVec[k] - light.direction[k];
-	//			}
-	//			VectorCoord vecReflection(3);
-	//			vecReflection = normalize(reflection);
-	//			float viewerDotReflection = max(0.0f, dot(vecReflection, viewDirection));
-	//			GzColor specularLight = { 0.0f, 0.0f, 0.0f };
-	//			for (int k = 0; k < 3; k++) {
-	//				specularLight[k] = Ks[k] * light.color[k] * pow(viewerDotReflection, spec);  // Apply Ks, color and pow(...) operation element-wise
-	//			}
-	//			// Add the diffuse and specular light to the total color
-	//			for (int k = 0; k < 3; k++) {
-	//				vecColor[i][k] += diffuseLight[k] + specularLight[k];  // Add diffuseLight and specularLight to color element-wise
-	//			}
-	//		}
-
-	//		 /*Now 'color' contains the color of the light at the current vertex
-	//		 Do something with 'color', like storing it in an array for later use, etc.*/
-	//		for (int k = 0; k < 3; k++) {
-	//			vecColor[i][k] += Ka[k] * ambientlight.color[k];  // Multiply Ka and color element-wise
-	//		}
-	//	}
-	//	// Scanline
-
-
-
-	//	for (float scanline = std::ceil(verticesVec[0][Y]); scanline <= verticesVec[2][Y]; scanline += 1.0f) {
-	//		// Interpolate x,z for the scanline
-	//		float x1, x2, z1, z2;
-	//		float t;
-	//		VectorCoord color1(3), color2(3);
-	//		VectorCoord normal1(3), normal2(3);
-	//		VectorCoord uvlist1(2), uvlist2(2);
-	//		// Interpolate between y0-y1 and y0-y2
-	//		if (scanline <= verticesVec[1][Y]) {
-
-	//			if ((verticesVec[1][Y] == verticesVec[0][Y])) {
-	//				t = 0;
-	//			}
-	//			else
-	//				t = (scanline - verticesVec[0][Y]) / (verticesVec[1][Y] - verticesVec[0][Y]);
-	//			x1 = interpolate(verticesVec[0][X], verticesVec[1][X], t);
-	//			z1 = interpolate(verticesVec[0][Z], verticesVec[1][Z], t);
-	//			uvlist1= interpolateTextureColor(UVlistVec[0], UVlistVec[1], t);
-	//			/*color1 = interpolateColor(vecColor[0], vecColor[1], t);*/
-	//			normal1 = interpolateColor(normalVec[0], normalVec[1], t);
-	//			if ((verticesVec[2][Y] == verticesVec[0][Y])) {
-	//				t = 0;
-	//			}
-	//			else
-	//				t = (scanline - verticesVec[0][Y]) / (verticesVec[2][Y] - verticesVec[0][Y]);
-
-	//			/*color2 = interpolateColor(vecColor[0], vecColor[2], t);*/
-	//			normal2 = interpolateColor(normalVec[0], normalVec[2], t);
-	//			uvlist2 = interpolateTextureColor(UVlistVec[0], UVlistVec[2], t);
-	//			x2 = interpolate(verticesVec[0][X], verticesVec[2][X], t);
-	//			z2 = interpolate(verticesVec[0][Z], verticesVec[2][Z], t);
-	//		}
-	//		else {
-	//			// Interpolate between y1-y2 and y0-y2
-
-	//			if ((verticesVec[2][Y] == verticesVec[1][Y])) {
-	//				t = 0;
-	//			}
-	//			else
-	//				t = (scanline - verticesVec[1][Y]) / (verticesVec[2][Y] - verticesVec[1][Y]);
-	//			x1 = interpolate(verticesVec[1][X], verticesVec[2][X], t);
-	//			/*color1 = interpolateColor(vecColor[1], vecColor[2], t);*/
-	//			normal1 = interpolateColor(normalVec[1], normalVec[2], t);
-	//			uvlist1 = interpolateTextureColor(UVlistVec[1], UVlistVec[2], t);
-	//			z1 = interpolate(verticesVec[1][Z], verticesVec[2][Z], t);
-	//			if ((verticesVec[2][Y] == verticesVec[0][Y])) {
-	//				t = 0;
-	//			}
-	//			else
-	//				t = (scanline - verticesVec[0][Y]) / (verticesVec[2][Y] - verticesVec[0][Y]);
-	//			x2 = interpolate(verticesVec[0][X], verticesVec[2][X], t);
-	//			z2 = interpolate(verticesVec[0][Z], verticesVec[2][Z], t);
-	//			uvlist2 = interpolateTextureColor(UVlistVec[0], UVlistVec[2], t);
-	//			normal2 = interpolateColor(normalVec[0], normalVec[2], t);
-	//			/*color2 = interpolateColor(vecColor[0], vecColor[2], t);*/
-	//		}
-
-	//		// Draw horizontal line for this scanline
-	//		if (x1 > x2) {
-	//			std::swap(x1, x2); std::swap(z1, z2); std::swap(color1, color2); std::swap(normal1, normal2); std::swap(uvlist1, uvlist2);
-	//		}
-
-	//		for (int x = std::ceil(x1); x <= std::floor(x2); ++x) {
-	//			float z = interpolate(z1, z2, (x - x1) / (x2 - x1));
-
-	//			// Calculate the color of the current pixel
-	//			float t = (x - x1) / (x2 - x1);
-	//			/*VectorCoord currColor = interpolateColor(color1, color2, t);*/
-	//			VectorCoord currNormalVec = interpolateColor(normal1, normal2, t);
-	//			VectorCoord curruvlist= interpolateTextureColor(uvlist1, uvlist2, t);
-	//			
-	//				
-	//			float VZ = z / (INT_MAX - z);
-	//			float adjustZ = (VZ + 1);
-	//			curruvlist[0] = curruvlist[0] * adjustZ; // (10)
-	//			curruvlist[1] = curruvlist[1] * adjustZ;
-	//			if (interp_mode == GZ_FLAT) {
-	//				GzPut(x, scanline, ctoi(vecColor[firstIndex][RED]), ctoi(vecColor[firstIndex][GREEN]), ctoi(vecColor[firstIndex][BLUE]), 1, z);
-	//			}
-	//			else {
-
-	//				VectorCoord normalColor(3);
-	//				GzColor textureColor;
-
-	//				tex_fun(curruvlist[0], curruvlist[1], textureColor);
-
-	//				for (int j = 0; j < 3; ++j) {
-	//					normalColor[j] = 0.0f;
-	//				}
-
-	//				//GzColor color = { 0.0f, 0.0f, 0.0f };  // Reset the color for each light
-	//				for (int j = 0; j < numlights; ++j) {
-	//					GzLight light = lights[j];
-
-
-	//					float dotProductNormLight = dot(currNormalVec, light.direction);
-	//					float dotProductNormView = dot(currNormalVec, viewDirection);
-	//					if (dotProductNormLight < 0 && dotProductNormView < 0) {
-	//						// flip normal vector if dot product under zero
-	//						currNormalVec[0] = -currNormalVec[0];
-	//						currNormalVec[1] = -currNormalVec[1];
-	//						currNormalVec[2] = -currNormalVec[2];
-	//						dotProductNormLight = -dotProductNormLight;
-	//						dotProductNormView = -dotProductNormView;
-	//					}
-	//					else if (dotProductNormLight * dotProductNormView < 0) {
-	//						// light and eye are on different sides of the surface, skip this light
-	//						continue;
-	//					}
-	//					// Calculate the diffuse light
-	//					/*float dotProduct = max(0.0f, dot(currNormalVec, light.direction));*/
-	//					GzColor diffuseLight;
-	//					// Calculate the diffuse light
-	//					for (int k = 0; k < 3; k++) {
-	//						diffuseLight[k] = textureColor[k] * light.color[k] * dotProductNormLight;  // Apply Kd, color and dotProduct element-wise
-	//					}
-
-	//					// Calculate the specular light
-	//					GzCoord reflection = { 0.0f, 0.0f, 0.0f };
-	//					for (int k = 0; k < 3; k++) {
-	//						reflection[k] = 2 * dotProductNormLight * currNormalVec[k] - light.direction[k];
-	//					}
-	//					VectorCoord vecReflection(3);
-	//					vecReflection = normalize(reflection);
-	//					float viewerDotReflection = max(0.0f, dot(vecReflection, viewDirection));
-	//					GzColor specularLight = { 0.0f, 0.0f, 0.0f };
-	//					for (int k = 0; k < 3; k++) {
-	//						if (interp_mode == GZ_NORMALS ) {
-	//							/*GzPut(x, scanline, ctoi(currColor[RED]), ctoi(currColor[GREEN]), ctoi(currColor[BLUE]), 1, z);*/
-	//							specularLight[k] = Ks[k] * light.color[k] * pow(viewerDotReflection, spec);  // Apply Ks, color and pow(...) operation element-wise
-	//						}
-	//						else if (interp_mode == GZ_COLOR) {
-
-	//							specularLight[k] = textureColor[k] * light.color[k] * pow(viewerDotReflection, spec);  // Apply Ks, color and pow(...) operation element-wise
-	//						}
-	//						
-	//					}
-	//					// Add the diffuse and specular light to the total color
-	//					for (int k = 0; k < 3; k++) {
-	//						normalColor[k] += diffuseLight[k] + specularLight[k];  // Add diffuseLight and specularLight to color element-wise
-	//					}
-	//				}
-
-	//				// Now 'color' contains the color of the light at the current vertex
-	//				// Do something with 'color', like storing it in an array for later use, etc.
-	//				for (int k = 0; k < 3; k++) {
-	//					normalColor[k] += textureColor[k] * ambientlight.color[k];  // Multiply Ka and color element-wise
-	//				}
-	//				GzPut(x, scanline, ctoi(normalColor[RED]), ctoi(normalColor[GREEN]), ctoi(normalColor[BLUE]), 1, z);
-	//			}
-	//			
-
-	//		
-
-
-	//		}
-	//	}
-	//}
-
-	return GZ_SUCCESS;
-}
-
-// Dot product for vector
-template<typename T1, typename T2>
-double dotArray(T1 a[3], T2 b[3]) {
-	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
-}
-
-// Cross product for vector
-template<typename T1, typename T2, typename T3>
-void crossArray(T1 a[3], T2 b[3], T3 c[3]) {
-	c[0] = a[1] * b[2] - a[2] * b[1];
-	c[1] = a[2] * b[0] - a[0] * b[2];
-	c[2] = a[0] * b[1] - a[1] * b[0];
-}
-
-/**
- * Given triangle vertex position a, b, c; check if point p within the triangle(assume they already in the same plane)
- *
- * @param p Point P
- * @param a Triangle vertex position A
- * @param b Triangle vertex position B
- * @param c Triangle vertex position C
- * @param n Triangle plane normal vector
- * @return A boolean indiciating if the point p within triangle abc
- */
-template<typename T1, typename T2, typename T3, typename T4, typename T5>
-bool IsPointWithinTriangle(T1 p[3], T2 a[3], T3 b[3], T4 c[3], T5 n[3])
-{
-	double AB[3] = { b[0] - a[0], b[1] - a[1], b[2] - a[2] };
-	double AP[3] = { p[0] - a[0], p[1] - a[1], p[2] - a[2] };
-	bool test1 = (dotArray(crossArray(AB, AP), n) >= 0);
-
-	double BC[3] = { c[0] - b[0], c[1] - b[1], c[2] - b[2] };
-	double BP[3] = { p[0] - b[0], p[1] - b[1], p[2] - b[2] };
-	bool test2 = (dotArray(crossArray(BC, BP), n) >= 0);
-
-	double CA[3] = { a[0] - c[0], a[1] - c[1], a[2] - c[2] };
-	double CP[3] = { p[0] - c[0], p[1] - c[1], p[2] - c[2] };
-	bool test3 = (dotArray(crossArray(CA, CP), n) >= 0);
-
-	return test1 && test2 && test3;
+    return localColor;
 }
 
 /**
@@ -1317,13 +855,13 @@ bool IsPointWithinTriangle(T1 p[3], T2 a[3], T3 b[3], T4 c[3], T5 n[3])
  * @param index The output index of first colliding triangle
  * @return A boolean indiciating if the light is colliding with any triangle
  */
-bool GzRender::GzCollisionWithTriangle(GzLight light, int &index)
+bool GzRender::GzCollisionWithTriangle(GzRay light, int& index)
 {
 	index = -1;
-	double firstIntersectPos[3];
+	GzVector3D firstIntersectPos;
 	for (int i = 0; i < triangleNum; i++)
 	{
-		double currIntersectPos[3];
+		GzVector3D currIntersectPos;
 		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
 		{
 			// If intersects, check if other triangle has collided with the light yet
@@ -1331,9 +869,7 @@ bool GzRender::GzCollisionWithTriangle(GzLight light, int &index)
 			{
 				// Light not collide with other triangles yet
 				index = i;
-				firstIntersectPos[0] = currIntersectPos[0];
-				firstIntersectPos[1] = currIntersectPos[1];
-				firstIntersectPos[2] = currIntersectPos[2];
+				firstIntersectPos = currIntersectPos;
 			}
 			else
 			{
@@ -1373,36 +909,138 @@ bool GzRender::GzCollisionWithTriangle(GzLight light, int &index)
  * @param intersectPos The intersecting point as array pointer
  * @return A boolean indiciating if the light is colliding with the input triangle
  */
-bool GzRender::GzCollisionWithSpecificTriangle(GzLight light, GzTriangle triangle, double intersectPos[3])
+bool GzRender::GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D intersectPos)
 {
-	double e1[3] = {triangle.v[1].position[0] - triangle.v[0].position[0],
-					triangle.v[1].position[1] - triangle.v[0].position[1],
-					triangle.v[1].position[2] - triangle.v[0].position[2] };
-	double e2[3] = {triangle.v[2].position[0] - triangle.v[0].position[0],
-					triangle.v[2].position[1] - triangle.v[0].position[1],
-					triangle.v[2].position[2] - triangle.v[0].position[2] };
-
-	// Normal to triangle plane
-	float e1e2Norm[3];
-	crossArray(e1, e2, e1e2Norm);
+	GzVector3D vertexA_pos = GzVector3D(triangle.v[0].position);
+	GzVector3D vertexB_pos = GzVector3D(triangle.v[1].position);
+	GzVector3D vertexC_pos = GzVector3D(triangle.v[2].position);
+	// Cross product of two edges that normal to triangle-position-plane, normalized
+	GzVector3D triangle_plane_norm = ((vertexB_pos - vertexA_pos) ^ (vertexC_pos - vertexA_pos)).normalized();	
 
 	// If flat triangle normal perpendicular to light, then no intersection in terms of direction
-	if (abs(dot(e1e2Norm, light.direction) < 0.0001))
+	if (abs(triangle_plane_norm * light.direction) < 0.0001)
 	{
 		return false;
 	}
 
 	// Compute intersection point(with triangle's plane)
-	// d = n dot x
-	// t = (d - n dot p) / (n dot d)
-	float d = dotArray(e1e2Norm, triangle.v[0].position);
-	double t = (d - dotArray(e1e2Norm, light.origin)) / dotArray(e1e2Norm, light.direction);
-	intersectPos[0] = light.origin[0] + t * light.direction[0];
-	intersectPos[1] = light.origin[1] + t * light.direction[1];
-	intersectPos[2] = light.origin[2] + t * light.direction[2];
+	// d = plane_normal dot x
+	// t = (d - plane_normal dot origin) / (plane_normal dot direction)
+	float d = triangle_plane_norm * vertexA_pos;
+	double t = (d - (triangle_plane_norm * light.startPoint)) / (triangle_plane_norm * light.direction);
+	intersectPos = light.startPoint + t * light.direction;
 
 	// Check if the point is within triangle
-	return IsPointWithinTriangle(intersectPos, triangle.v[0].position, triangle.v[1].position, triangle.v[2].position, e1e2Norm);
+	GzVector3D AB = vertexB_pos - vertexA_pos;
+	GzVector3D AQ = intersectPos - vertexA_pos;
+	bool test1 = ((AB ^ AQ) * triangle_plane_norm) >= 0;
+
+	GzVector3D BC = vertexC_pos - vertexB_pos;
+	GzVector3D BQ = intersectPos - vertexB_pos;
+	bool test2 = ((BC ^ BQ) * triangle_plane_norm) >= 0;
+	
+	GzVector3D CA = vertexA_pos - vertexC_pos;
+	GzVector3D CQ = intersectPos - vertexC_pos;
+	bool test3 = ((CA ^ CQ) * triangle_plane_norm) >= 0;
+
+	return test1 && test2 && test3;
+}
+
+int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueList)
+/* numParts - how many names and values */
+{
+	/* HW 2.2
+	-- Pass in a triangle description with tokens and values corresponding to
+		  GZ_NULL_TOKEN:		do nothing - no values
+		  GZ_POSITION:		3 vert positions in model space
+	-- Invoke the rastrizer/scanline framework
+	-- Return error code
+	*/
+	GzCoord* vertices = NULL;
+	GzCoord* normals = NULL;
+	GzTextureIndex* uvlist = NULL;
+	for (int i = 0; i < numParts; i++) {
+		if (nameList[i] == GZ_POSITION) {
+			vertices = static_cast<GzCoord*>(valueList[i]);
+		}
+		else if (nameList[i] == GZ_NORMAL) {
+				normals = static_cast<GzCoord*>(valueList[i]);
+			}
+		else if (nameList[i] == GZ_TEXTURE_INDEX) {
+			uvlist = static_cast<GzTextureIndex*>(valueList[i]);
+		}
+	}
+
+	if (vertices != NULL) {
+		// Sort vertices by y
+		std::vector<std::vector<float>> verticesVec, normalVec, UVlistVec;
+		std::vector<std::vector<float>> outputVec(3, std::vector<float>(3));
+		// Add each GzCoord to the vector
+		for (int i = 0; i < 3; ++i)
+		{
+			verticesVec.push_back(std::vector<float>(vertices[i], vertices[i] + 3));
+			normalVec.push_back(std::vector<float>(normals[i], normals[i] + 3));
+			UVlistVec.push_back(std::vector<float>(uvlist[i], uvlist[i] + 2));
+		}
+		for (int count = matlevel; count >= 2; count--) {
+			GzMatrix& matrix = Ximage[count];
+			GzMatrix& Xn = Xnorm[count];
+			for (int h = 0; h < 3; ++h) {
+				std::vector<float> resultVec0(4);  // ������� ��ʼֵΪ0
+				std::vector<float> resultVec1(4);  // ������� ��ʼֵΪ0
+				verticesVec[h].push_back(1.0);  // ��չ��4D����
+				normalVec[h].push_back(1.0);
+				for (int j = 0; j < 4; ++j) {
+					for (int k = 0; k < 4; ++k) {
+						resultVec0[j] += matrix[j][k] * verticesVec[h][k];
+						resultVec1[j] += Xn[j][k] * normalVec[h][k];
+					}
+				}
+				verticesVec[h].pop_back();
+				normalVec[h].pop_back();
+				verticesVec[h][0] = resultVec0[0] / resultVec0[3];
+				verticesVec[h][1] = resultVec0[1] / resultVec0[3];
+				verticesVec[h][2] = resultVec0[2] / resultVec0[3];
+				normalVec[h][0] = resultVec1[0] / resultVec1[3];
+				normalVec[h][1] = resultVec1[1] / resultVec1[3];
+				normalVec[h][2] = resultVec1[2] / resultVec1[3];
+				if (count == 2 && verticesVec[h][2] < 0) {
+					return GZ_FAILURE;
+				}
+			}
+		}
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				vertices[i][j] = verticesVec[i][j];
+				normals[i][j] = normalVec[i][j];
+
+			}
+		}
+		if (vertices != nullptr && normals != nullptr && numTriangles < MAX_TRIANGLES)
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				GzVertex v(vertices[i], normals[i]);
+				triangles[numTriangles] = GzTriangle(v, v, v);
+				numTriangles++;
+			}
+		}
+	}
+	return GZ_SUCCESS;
+}
+
+// Dot product for vector
+template<typename T1, typename T2>
+double dotArray(T1 a[3], T2 b[3]) {
+	return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+}
+
+// Cross product for vector
+template<typename T1, typename T2, typename T3>
+void crossArray(T1 a[3], T2 b[3], T3 c[3]) {
+	c[0] = a[1] * b[2] - a[2] * b[1];
+	c[1] = a[2] * b[0] - a[0] * b[2];
+	c[2] = a[0] * b[1] - a[1] * b[0];
 }
 
 /**
@@ -1415,7 +1053,8 @@ bool GzRender::GzCollisionWithSpecificTriangle(GzLight light, GzTriangle triangl
  * @param t A reference to store the distance from the origin to the intersection point
  * @return A boolean indicating if the ray intersects with the sphere
  */
-bool RayIntersectsSphere(const double origin[3], const double direction[3], const double center[3], double radius, double &t) {
+bool GzRender::RayIntersectsSphere(const double origin[3], const double direction[3], const double center[3], double radius, double &t) 
+{
     double oc[3] = { origin[0] - center[0], origin[1] - center[1], origin[2] - center[2] };
     double b = 2 * dotArray(oc, direction);
     double c = dotArray(oc, oc) - radius * radius;
@@ -1438,12 +1077,14 @@ bool RayIntersectsSphere(const double origin[3], const double direction[3], cons
  * @param index The output index of first colliding sphere
  * @return A boolean indicating if the light is colliding with any sphere
  */
-bool GzRender::GzCollisionWithSphere(GzLight light, int &index) {
+bool GzRender::GzCollisionWithSphere(GzRay light, int &index) 
+{
     index = -1;
-    double closest_t = std::numeric_limits<double>::max();
+	
+    double closest_t = DBL_MAX; //std::numeric_limits<double>::max(); identifier error
     double t;
     for (int i = 0; i < sphereNum; i++) {
-        if (RayIntersectsSphere(light.origin, light.direction, spheres[i].center, spheres[i].radius, t)) {
+        if (RayIntersectsSphere(light.startPoint.GetDoubleArr(), light.direction.GetDoubleArr(), spheres[i].position, spheres[i].radius, t)) {
             if (t < closest_t) {
                 closest_t = t;
                 index = i;
@@ -1462,16 +1103,17 @@ bool GzRender::GzCollisionWithSphere(GzLight light, int &index) {
  * @param reflectLight The reflected light
  * @param refractLight The refracted light
  */
-void GzRender::CalculateSphereReflectionAndRefraction(GzLight light, GzSphere sphere, const double intersectionPoint[3], GzLight &reflectLight, GzLight &refractLight) {
+void GzRender::CalculateSphereReflectionAndRefraction(GzRay light, GzSphere sphere, const double intersectionPoint[3], GzRay&reflectLight, GzRay&refractLight)
+{
     // Calculate normal at the intersection point
     double normal[3] = {
-        (intersectionPoint[0] - sphere.center[0]) / sphere.radius,
-        (intersectionPoint[1] - sphere.center[1]) / sphere.radius,
-        (intersectionPoint[2] - sphere.center[2]) / sphere.radius
+        (intersectionPoint[0] - sphere.position[0]) / sphere.radius,
+        (intersectionPoint[1] - sphere.position[1]) / sphere.radius,
+        (intersectionPoint[2] - sphere.position[2]) / sphere.radius
     };
 
     // Calculate reflection vector
-    double dot_ln = dotArray(light.direction, normal);
+    double dot_ln = dotArray(light.direction.GetDoubleArr(), normal);
     reflectLight.direction[0] = light.direction[0] - 2 * dot_ln * normal[0];
     reflectLight.direction[1] = light.direction[1] - 2 * dot_ln * normal[1];
     reflectLight.direction[2] = light.direction[2] - 2 * dot_ln * normal[2];

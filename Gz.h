@@ -32,6 +32,8 @@
 
 #define	GZ_TEXTURE_MAP	1010		/* texture function ptr */
 
+#include <cmath>
+
 /*
  * value-list attributes
  */
@@ -40,16 +42,180 @@
 #define GZ_FLAT			0	/* do flat shading with GZ_RBG_COLOR */
 #define	GZ_COLOR		1	/* interpolate vertex color */
 #define	GZ_NORMALS		2	/* interpolate normals */
+
+#ifndef GZVECTOR3D
+#define GZVECTOR3D
+typedef struct GzVector3D {
+    float arr[3];
+
+    // Default Constructor
+    GzVector3D() {
+        arr[0] = 0;
+        arr[1] = 0;
+        arr[2] = 0;
+    }
+
+    // Constructor of floats
+    GzVector3D(float a, float b, float c) {
+
+        arr[0] = a;
+        arr[1] = b;
+        arr[2] = c;
+    }
+
+    // Constructor of float arr
+    GzVector3D(const float(&v)[3]) {
+
+        arr[0] = v[0];
+        arr[1] = v[1];
+        arr[2] = v[2];
+    }
+
+    // Constructor of double arr
+    GzVector3D(const double(&v)[3]) {
+
+        arr[0] = (float)v[0];
+        arr[1] = (float)v[1];
+        arr[2] = (float)v[2];
+    }
+
+    // Destructor
+    ~GzVector3D() {
+    }
+
+    // Copy constructor(deep copy)
+    GzVector3D(const GzVector3D& other) {
+        memcpy(arr, other.arr, sizeof(arr));
+    }
+
+    // Overloading [] operator for quick indexing
+    float& operator[](int index) {
+        return arr[index];
+    }
+
+    // Overloading + operator for Scalar add
+    GzVector3D operator+(float s) const {
+        return GzVector3D(
+            arr[0] + s,
+            arr[1] + s,
+            arr[2] + s);
+    }
+
+    // Overloading + operator for Scalar add
+    friend GzVector3D operator+(float s, const GzVector3D& v) {
+        return v + s;
+    }
+
+    // Overloading + operator for vector add
+    GzVector3D operator+(const GzVector3D& other) const {
+        return GzVector3D(
+            arr[0] + other.arr[0],
+            arr[1] + other.arr[1],
+            arr[2] + other.arr[2]);
+    }
+
+    // Overloading - operator for vector difference
+    GzVector3D operator-(const GzVector3D& other) const {
+        return GzVector3D(
+            arr[0] - other.arr[0],
+            arr[1] - other.arr[1],
+            arr[2] - other.arr[2]);
+    }
+
+    // Overloading * operator for Dot product
+    float operator*(const GzVector3D& other) const {
+        return arr[0] * other.arr[0] + arr[1] * other.arr[1] + arr[2] * other.arr[2];
+    }
+
+    // Overloading * operator for Scalar muliply
+    GzVector3D operator*(float s) const {
+        return GzVector3D(
+            arr[0] * s,
+            arr[1] * s,
+            arr[2] * s);
+    }
+
+    // Overloading * operator for Scalar muliply
+    friend GzVector3D operator*(float s, const GzVector3D& v) {
+        return v * s;
+    }
+
+    // Overloading * operator for Scalar divide
+    GzVector3D operator/(float s) const {
+        return GzVector3D(
+            arr[0] / s,
+            arr[1] / s,
+            arr[2] / s);
+    }
+
+    // Overloading * operator for Scalar divide
+    friend GzVector3D operator/(float s, const GzVector3D& v) {
+        return v / s;
+    }
+
+    // Overloading ^ operator for Cross product
+    GzVector3D operator^(const GzVector3D& other) const {
+        return GzVector3D(
+            arr[1] * other.arr[2] - arr[2] * other.arr[1],
+            arr[2] * other.arr[0] - arr[0] * other.arr[2],
+            arr[0] * other.arr[1] - arr[1] * other.arr[0]);
+    }
+
+    // Distance calculation
+    float norm() {
+        return sqrt(arr[0] * arr[0] + arr[1] * arr[1] + arr[2] * arr[2]);
+    }
+
+    // Return Normalized vector
+    GzVector3D normalized() {
+        float n = norm();
+        return GzVector3D(
+            arr[0] / n,
+            arr[1] / n,
+            arr[2] / n);
+    }
+
+    // Retrieve a copy of array in double
+    double* GetDoubleArr() {
+        static double output[3] = {
+            (double)arr[0],
+            (double)arr[1],
+            (double)arr[2] };
+        return output;
+    }
+
+    // Retrieve a copy of array in float
+    float* GetFloatArr() {
+        static float output[3] = {
+            arr[0],
+            arr[1],
+            arr[2] };
+        return output;
+    }
+
+    // Test if a point within a triangle
+
+
+
+} GzVector3D;
+#endif
+
+#ifndef GZVERTEX
+#define GZVERTEX
 typedef struct GzVertex
 {
+    // Source:https://en.wikipedia.org/wiki/List_of_refractive_indices
+    // Use plate glass(window glass) refractive index as default
+    float refract_index = (float)1.52;
+
     float position[3];
     float color_diffuse[3];
     float color_specular[3];
     float normal[3];
     float shininess;
-    GzVertex(GzCoord position_, GzCoord normal_) {
-        memcpy(position, position_, sizeof(position));
-        memcpy(normal, normal_, sizeof(normal));
+    GzVertex(const float(&pos)[3], const float(&norm)[3]) {
+        memcpy(position, pos, sizeof(position));
+        memcpy(normal, norm, sizeof(normal));
         // color_diffuse 和 color_specular 添加默认值也可以
         memset(color_diffuse, 0, sizeof(color_diffuse));
         memset(color_specular, 0, sizeof(color_specular));
@@ -64,14 +230,13 @@ typedef struct GzVertex
         
     }
 } GzVertex;
+#endif
 
+#ifndef GZTRIANGLE
+#define GZTRIANGLE
 typedef struct GzTriangle
 {
     GzVertex v[3];
-
-    // Source:https://en.wikipedia.org/wiki/List_of_refractive_indices
-    // Use plate glass(window glass) refractive index as default
-    float refract_index = 1.52; 
 
     GzTriangle(GzVertex v0, GzVertex v1, GzVertex v2) {
         v[0] = v0;
@@ -80,17 +245,23 @@ typedef struct GzTriangle
     }
     GzTriangle() {}
 } GzTriangle;
+#endif
 
+#ifndef GZRAY
+#define GZRAY
 typedef struct GzRay {
   public:
     GzRay() {}
-    GzRay(GzVertex start, GzVertex dir) {
+    GzRay(GzVector3D start, GzVector3D dir) {
         startPoint = start;
         direction = dir;
     };
-    GzVertex startPoint, direction;
-}GzRay;
+    GzVector3D startPoint, direction;
+} GzRay;
+#endif
 
+#ifndef GZSPHERE
+#define GZSPHERE
 typedef struct GzSphere
 {
     double position[3];
@@ -99,11 +270,7 @@ typedef struct GzSphere
     double shininess;
     double radius;
 } GzSphere;
-
-typedef struct GzLight {
-    double position[3];
-    double color[3];
-} GzLight;
+#endif
 
 typedef int     GzToken;
 typedef void    *GzPointer;
