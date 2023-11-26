@@ -12,6 +12,7 @@
 #include <limits>
 #include <cfloat>
 #include <Windows.h>
+#include <string>
 
 #include	"rend.h"
 
@@ -789,9 +790,13 @@ void GzRender::RayTrace(){
 			float y = (1 - 2 * (j + 0.5) / yres) * d;
 			GzVector3D color = EmitLight(GzRay(GzVector3D(0, 0, -1), GzVector3D(x, y, 1)), 1);
 
+			//std::string info = std::to_string(color[RED]) + " " + std::to_string(color[GREEN]) + " " + std::to_string(color[BLUE]).c_str() + ", ";
+			//OutputDebugStringA(info.c_str());
+
 			GzDepth z = 0;
 			GzPut(i, j, ctoi(color[RED]), ctoi(color[GREEN]), ctoi(color[BLUE]), 1, z);
 		}
+		OutputDebugStringA("\n");
 	}
 }
 
@@ -878,24 +883,24 @@ GzVector3D GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTri
 	// Color of outgoing light for diffuse, le * (N dot L)
 	// Total color
 	GzVector3D diffuseColor = /**Kd * */diffuseRayColor * (normal * diffuseDir);
-	GzVector3D totalColor = reflectRatio * reflectedColor + refractRatio * refractedColor + diffuseColor;
+	GzVector3D totalColor = reflectRatio * reflectedColor + refractRatio * refractedColor + diffuseColor + 0.2;
 
 	return totalColor;
 }
 
 GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
 {
-	int maxDepth = 5;
+	int maxDepth = 2;
 	GzVector3D normDirection = GzVector3D(ray.direction).normalized();
 	// Check the intersection between the light beam and objects in the scene
-	GzVertex intersection; // intersection point between ray and object?
+	GzVector3D intersection; // intersection point between ray and object?
 	GzTriangle collidedTriangle; // The intersecting triangle(collision)
     //Ray intersection;
 	// intersect either sphere or triangle
 	int index;
 
 	// TODO: negotiate how to call intersectScene (Kevin)
-    if (!GzCollisionWithTriangle(ray, index)/*intersectObject(ray, intersection)*/) 
+    if (!GzCollisionWithTriangle(ray, index, intersection)/*intersectObject(ray, intersection)*/)
 	{ 
         return GzVector3D(0, 0, 0); // just black is ok
     }
@@ -904,7 +909,8 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 
 	// Calculate the color based on the Phong model
     //VectorCoord localColor = phongModel(Ray(startPoint, direction), hit);
-	GzVector3D localColor = FresnelReflection(ray, intersection, triangles[index], depth);
+	GzVertex intersection_vertex = GzVertex(intersection[0], intersection[1], intersection[2]);
+	GzVector3D localColor = FresnelReflection(ray, intersection_vertex, triangles[index], depth);
 
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
 	if (depth >= maxDepth)
@@ -935,12 +941,12 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
  *
  * @param light The input light for collision detection
  * @param index The output index of first colliding triangle
+ * @param firstIntersectPos The first position of intersection
  * @return A boolean indiciating if the light is colliding with any triangle
  */
-bool GzRender::GzCollisionWithTriangle(GzRay light, int& index)
+bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firstIntersectPos)
 {
 	index = -1;
-	GzVector3D firstIntersectPos;
 	for (int i = 0; i < numTriangles; i++)
 	{
 		GzVector3D currIntersectPos;
