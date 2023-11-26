@@ -193,10 +193,6 @@ typedef struct GzVector3D {
         return output;
     }
 
-    // Test if a point within a triangle
-
-
-
 } GzVector3D;
 #endif
 

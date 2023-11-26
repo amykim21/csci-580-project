@@ -11,6 +11,7 @@
 #include <stdlib.h> 
 #include <limits>
 #include <cfloat>
+#include <Windows.h>
 
 #include	"rend.h"
 
@@ -22,80 +23,80 @@ typedef std::vector<std::vector<float>> VectorMatrix;
 /**
 class BSPTree {
 public:
-    BSPNode* root;
+	BSPNode* root;
 
-    BSPTree() : root(nullptr) {}
+	BSPTree() : root(nullptr) {}
 
-    ~BSPTree() {
-        delete root;
-    }
+	~BSPTree() {
+		delete root;
+	}
 
-    // Recursively build the BSP tree from a list of objects
-    BSPNode* buildTree(const std::vector<Object*>& objects, int depth = 0) {
-        if (objects.empty() || depth > MAX_DEPTH) {
-            return nullptr;
-        }
+	// Recursively build the BSP tree from a list of objects
+	BSPNode* buildTree(const std::vector<Object*>& objects, int depth = 0) {
+		if (objects.empty() || depth > MAX_DEPTH) {
+			return nullptr;
+		}
 
-        BSPNode* node = new BSPNode();
+		BSPNode* node = new BSPNode();
 
-        Plane partitionPlane = choosePartitionPlane(objects);
-        std::vector<Object*> frontObjects;
-        std::vector<Object*> backObjects;
-        partitionObjects(objects, partitionPlane, frontObjects, backObjects);
+		Plane partitionPlane = choosePartitionPlane(objects);
+		std::vector<Object*> frontObjects;
+		std::vector<Object*> backObjects;
+		partitionObjects(objects, partitionPlane, frontObjects, backObjects);
 
-        node->partitionPlane = partitionPlane;
-        node->front = buildTree(frontObjects, depth + 1);
-        node->back = buildTree(backObjects, depth + 1);
+		node->partitionPlane = partitionPlane;
+		node->front = buildTree(frontObjects, depth + 1);
+		node->back = buildTree(backObjects, depth + 1);
 
-        // If this is a leaf node, assign the objects to this node
-        if (node->isLeaf()) {
-            node->objects = objects;
-        }
+		// If this is a leaf node, assign the objects to this node
+		if (node->isLeaf()) {
+			node->objects = objects;
+		}
 
-        return node;
-    }
+		return node;
+	}
 
-    // Traverse the BSP tree with a ray to find the closest intersection
-    Object* traverse(Ray& ray, BSPNode* node, float& closestDistance) {
-        if (!node || node->isLeaf()) {
-            return findClosestIntersection(ray, node->objects, closestDistance);
-        }
+	// Traverse the BSP tree with a ray to find the closest intersection
+	Object* traverse(Ray& ray, BSPNode* node, float& closestDistance) {
+		if (!node || node->isLeaf()) {
+			return findClosestIntersection(ray, node->objects, closestDistance);
+		}
 
-        // Determine the order to traverse front and back child based on the ray direction
-        bool frontFirst = ray.direction.dot(node->partitionPlane.normal) < 0;
-        BSPNode* firstChild = frontFirst ? node->front : node->back;
-        BSPNode* secondChild = frontFirst ? node->back : node->front;
+		// Determine the order to traverse front and back child based on the ray direction
+		bool frontFirst = ray.direction.dot(node->partitionPlane.normal) < 0;
+		BSPNode* firstChild = frontFirst ? node->front : node->back;
+		BSPNode* secondChild = frontFirst ? node->back : node->front;
 
-        // Traverse the first child
-        Object* closestObject = traverse(ray, firstChild, closestDistance);
+		// Traverse the first child
+		Object* closestObject = traverse(ray, firstChild, closestDistance);
 
-        // If the closest intersection is further than the partition plane, also check the second child
-        if (closestDistance > node->partitionPlane.distance(ray.origin)) {
-            Object* secondClosestObject = traverse(ray, secondChild, closestDistance);
-            if (secondClosestObject) {
-                closestObject = secondClosestObject;
-            }
-        }
+		// If the closest intersection is further than the partition plane, also check the second child
+		if (closestDistance > node->partitionPlane.distance(ray.origin)) {
+			Object* secondClosestObject = traverse(ray, secondChild, closestDistance);
+			if (secondClosestObject) {
+				closestObject = secondClosestObject;
+			}
+		}
 
-        return closestObject;
-    }
+		return closestObject;
+	}
 
 private:
-    // A function to choose the best partition plane based on a heuristic
-    Plane choosePartitionPlane(const std::vector<Object*>& objects) {
-        // Implement heuristic here
-    }
+	// A function to choose the best partition plane based on a heuristic
+	Plane choosePartitionPlane(const std::vector<Object*>& objects) {
+		// Implement heuristic here
+	}
 
-    // A function to partition objects into front and back lists based on a plane
-    void partitionObjects(const std::vector<Object*>& objects, const Plane& plane,
-                          std::vector<Object*>& frontObjects, std::vector<Object*>& backObjects) {
-        // Implement partitioning logic here
-    }
+	// A function to partition objects into front and back lists based on a plane
+	void partitionObjects(const std::vector<Object*>& objects, const Plane& plane,
+						  std::vector<Object*>& frontObjects, std::vector<Object*>& backObjects) {
+		// Implement partitioning logic here
+	}
 
-    // A function to find the closest intersection within a list of objects
-    Object* findClosestIntersection(Ray& ray, const std::vector<Object*>& objects, float& closestDistance) {
-        // Implement intersection logic here
-    }
+	// A function to find the closest intersection within a list of objects
+	Object* findClosestIntersection(Ray& ray, const std::vector<Object*>& objects, float& closestDistance) {
+		// Implement intersection logic here
+	}
 };
 */
 
@@ -239,7 +240,9 @@ GzRender::GzRender(int xRes, int yRes)
 	int totalPixels = xRes * yRes;
 	pixelbuffer = new GzPixel[totalPixels];
 	framebuffer = new char[3 * totalPixels];
+	numTriangles = 0;
 	numlights = 0;
+	sphereNum;
 	/* HW 3.6
 	- setup Xsp and anything only done once
 	- init default camera
@@ -790,7 +793,6 @@ void GzRender::RayTrace(){
 			GzPut(i, j, ctoi(color[RED]), ctoi(color[GREEN]), ctoi(color[BLUE]), 1, z);
 		}
 	}
-		
 }
 
 /**
@@ -939,11 +941,12 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index)
 {
 	index = -1;
 	GzVector3D firstIntersectPos;
-	for (int i = 0; i < triangleNum; i++)
+	for (int i = 0; i < numTriangles; i++)
 	{
 		GzVector3D currIntersectPos;
 		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
 		{
+			OutputDebugStringA("Collided\n");
 			// If intersects, check if other triangle has collided with the light yet
 			if (index == -1)
 			{
@@ -954,25 +957,14 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index)
 			else
 			{
 				// Light collided with other triangles before, check intersection position
+				// The closet position to start point will be the first intersection
 
-				// Intersection points are points on light direction vector, so we only need to compare one of the dimensions.
-				// We need to select a non-zero value from one of the dimensions.
-				int j;
-				for (j = 0; j < 3; j++)
-				{
-					if (light.direction[j] > 0) break;
-				}
+				float first_dist = (firstIntersectPos - light.startPoint).norm();
+				float current_dist = (currIntersectPos - light.startPoint).norm();
 
-				// If the "firstPos-->currPos" vector and the light direction vector are having different signs, 
-				// then currPos will be the first point the light is colliding.
-				double diff = currIntersectPos[j] - firstIntersectPos[j];
-				if (diff / light.direction[0] < 0)
+				if (current_dist < first_dist)
 				{
-					// Then current triangle will be the first triangle intersecting
-					index = i;
-					firstIntersectPos[0] = currIntersectPos[0];
-					firstIntersectPos[1] = currIntersectPos[1];
-					firstIntersectPos[2] = currIntersectPos[2];
+					firstIntersectPos = currIntersectPos;
 				}
 			}
 		}
@@ -989,7 +981,7 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index)
  * @param intersectPos The intersecting point as array pointer
  * @return A boolean indiciating if the light is colliding with the input triangle
  */
-bool GzRender::GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D intersectPos)
+bool GzRender::GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D& intersectPos)
 {
 	GzVector3D vertexA_pos = GzVector3D(triangle.v[0].position);
 	GzVector3D vertexB_pos = GzVector3D(triangle.v[1].position);
@@ -1098,12 +1090,11 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 		}
 		if (vertices != nullptr && normals != nullptr && numTriangles < MAX_TRIANGLES)
 		{
-			for (int i = 0; i < 3; i++)
-			{
-				GzVertex v(vertices[i], normals[i]);
-				triangles[numTriangles] = GzTriangle(v, v, v);
-				numTriangles++;
-			}
+			GzVertex v0(vertices[0], normals[0]);
+			GzVertex v1(vertices[1], normals[1]);
+			GzVertex v2(vertices[2], normals[2]);
+			triangles[numTriangles] = GzTriangle(v0, v1, v2);
+			numTriangles++;
 		}
 	}
 	return GZ_SUCCESS;
