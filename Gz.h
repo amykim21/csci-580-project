@@ -81,7 +81,6 @@ typedef struct GzVector3D {
 
     // Destructor
     ~GzVector3D() {
-
     }
 
     // Copy constructor(deep copy)

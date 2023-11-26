@@ -790,8 +790,8 @@ void GzRender::RayTrace(){
 			float y = (1 - 2 * (j + 0.5) / yres) * d;
 			GzVector3D color = EmitLight(GzRay(GzVector3D(0, 0, -1), GzVector3D(x, y, 1)), 1);
 
-			//std::string info = std::to_string(color[RED]) + " " + std::to_string(color[GREEN]) + " " + std::to_string(color[BLUE]).c_str() + ", ";
-			//OutputDebugStringA(info.c_str());
+			std::string info = std::to_string(color[RED]) + " " + std::to_string(color[GREEN]) + " " + std::to_string(color[BLUE]).c_str() + ", ";
+			OutputDebugStringA(info.c_str());
 
 			GzDepth z = 0;
 			GzPut(i, j, ctoi(color[RED]), ctoi(color[GREEN]), ctoi(color[BLUE]), 1, z);
@@ -890,7 +890,13 @@ GzVector3D GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTri
 
 GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
 {
-	int maxDepth = 2;
+	int maxDepth = 5;
+	// If the set maximum recursive depth is reached, no further reflection computation occurs
+	if (depth >= maxDepth)
+	{
+		return GzVector3D(0, 0, 0);
+	}
+
 	GzVector3D normDirection = GzVector3D(ray.direction).normalized();
 	// Check the intersection between the light beam and objects in the scene
 	GzVector3D intersection; // intersection point between ray and object?
@@ -912,16 +918,22 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	GzVertex intersection_vertex = GzVertex(intersection[0], intersection[1], intersection[2]);
 	GzVector3D localColor = FresnelReflection(ray, intersection_vertex, triangles[index], depth);
 
-	// If the set maximum recursive depth is reached, no further reflection computation occurs
-	if (depth >= maxDepth)
-	{
-		return GzVector3D(0, 0, 0);
-	}
     // Light source for the final color.
     // 1. Define the radius of the light source.
     // 2. Do the collision detection by CollisionWithSphere.
     // 3. Set the light source color.    One white light and one color light.
 	
+	double dist_placeholder;
+	GzVector3D lightSourcePos = GzVector3D(0, 2, -1);
+	GzVector3D lightSourceColor = GzVector3D(1, 1, 1);
+	float lightSourceRadius = 1;
+
+	if (RayIntersectsSphere(ray.startPoint.GetDoubleArr(), ray.direction.GetDoubleArr(), lightSourcePos.GetDoubleArr(), lightSourceRadius, dist_placeholder))
+	{
+		return lightSourceColor;
+	}
+
+	/**
 	for (GzSphere sp : lightSources)
 	{
 		double dist_placeholder;
@@ -930,6 +942,8 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 			return GzVector3D(sp.color_diffuse);
 		}
 	}
+	*/
+
     // The overall color is a combination of the color computed from the Phong model and the color of the reflection
     //VectorCoord color = localColor + reflectedColor * 0.8;
     

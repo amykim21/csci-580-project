@@ -40,7 +40,6 @@ public:
 	int			numTriangles;
 	GzLight		lights[MAX_LIGHTS];
 
-
 	GzSphere lightSources[3];	// TODO: Make up param, need to move to rend.h later
 	GzSphere	spheres[MAX_SPHERES];
 
