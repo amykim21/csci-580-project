@@ -228,7 +228,7 @@ typedef struct GzVertex
     float refract_index = (float)1.52;
 
     float position[3];
-    float color[3];
+    float color[3] = {1, 0, 0};
     float color_diffuse[3];
     float color_specular[3];
     float normal[3];

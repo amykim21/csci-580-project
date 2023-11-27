@@ -885,7 +885,7 @@ GzFresnel GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTria
 	return GzFresnel(reflectedColor, refractedColor, reflectRatio);
 }
 
-GzVector3D GzRender::EmitLight(GzRay ray, int depth)
+GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
 {
 	int maxDepth = 5;
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
@@ -903,7 +903,7 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
     }
 	GzVertex intersection_vertex = GzVertex(intersection[0], intersection[1], intersection[2]);
 	
-	GzRay lightSource(GzVector3D(0, 1, -1), GzVector3D(), GzVector3D());
+	GzRay lightSource(GzVector3D(0, 1, -1), GzVector3D(0, -1, 1), GzVector3D(1, 1, 1));
 	return PhongModel(ray, intersection_vertex, lightSource, triangles[index], depth);
 }
 
@@ -930,8 +930,8 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	GzVector3D View = (GzVector3D(ray.startPoint) - obj_pos).normalized();
 
 	// Calculate Phong shading components: diffuse and specular
-	double diffuse = clamp(L * N, 0.0, 1.0);
-	double specular = clamp(pow(clamp(R * View, 0.0, 1.0), spec), 0.0, 1.0);
+	//double diffuse = clamp(L * N, 0.0, 1.0);
+	//double specular = clamp(pow(clamp(R * View, 0.0, 1.0), spec), 0.0, 1.0);
 
 	GzVector3D triangleColor = GzVector3D(triangle.v[0].color);
 	GzVector3D kd = triangleColor;
@@ -945,11 +945,11 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 
 	// Compute specular part
 	GzFresnel fr = FresnelReflection(ray, intersection, triangle, depth);
+	GzVector3D specular_part = lightSource.color * pow(clamp(R * view_vec, 0.0, 1.0), spec);
 
-	GzVector3D specular_part = lightSource.color * pow(R * view_vec, spec);
-	GzVector3D reflect = fr.reflection_color;
+	GzVector3D reflect = fr.reflection_color * fr.reflect_ratio;
 	GzVector3D specular = ks & ((specular_part + reflect) / 2);
-	GzVector3D refract = fr.refraction_color;
+	GzVector3D refract = fr.refraction_color * (1 - fr.reflect_ratio);
 
 	// If the object is in shadow, set the diffuse and specular part to 0
 	GzVector3D firstIntersectPos;
@@ -964,7 +964,7 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	}
 
 	// Total color is the sum of the ambient, diffuse and specular color
-	GzVector3D color = ambient + diffuse + specular;
+	GzVector3D color = ambient + diffuse + specular + refract;
 
 	return color;
 }
