@@ -892,7 +892,7 @@ GzVector3D ClampVector(GzVector3D vec) {
 }
 GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
 {
-	int maxDepth = 5;
+	int maxDepth = 4;
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
 	if (depth >= maxDepth)
 	{
@@ -995,10 +995,12 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 
 	// Total color is the sum of the ambient, diffuse and specular color
 	//GzVector3D color = diffuse + specular + refract;
-	GzVector3D color = diffuse + (ks & specular);
-	if(abs(color.arr[0]-1)<0.1&& color.arr[1] <0.2){
-		printf("1");
-	}
+	GzVector3D reflect_dir = (2.0f * (N * L) * N - L).normalized();
+	GzRay reflect_ray = GzRay(obj_pos, reflect_dir); 
+	float reflectance = 0.5;
+	GzVector3D reflect = reflectance * EmitLight(reflect_ray, depth + 1);
+	GzVector3D color = (1.0f - reflectance)*(diffuse + (ks & specular))+ reflect;
+
 	return color;
 }
 
