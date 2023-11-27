@@ -954,10 +954,7 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	// If the object is in shadow, set the diffuse and specular part to 0
 	GzVector3D firstIntersectPos;
 	int index;
-	bool collided = GzCollisionWithTriangle(lightSource, index, firstIntersectPos);
-	bool self_collided = (obj_pos - firstIntersectPos).norm() < 0.0001;
-
-	if (collided && !self_collided) 
+	if (GzCollisionWithTriangle(lightSource, index, firstIntersectPos))
 	{
 		diffuse = GzVector3D(0, 0, 0);
 		specular = GzVector3D(0, 0, 0);
@@ -1000,7 +997,7 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 				float first_dist = (firstIntersectPos - light.startPoint).norm();
 				float current_dist = (currIntersectPos - light.startPoint).norm();
 
-				if (current_dist < first_dist)
+				if (current_dist < first_dist && current_dist > 0.0001)
 				{
 					firstIntersectPos = currIntersectPos;
 				}

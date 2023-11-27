@@ -218,6 +218,7 @@ int Application5::Render()
 	GzPointer	valueListTriangle[3]; 	/* vertex attribute pointers */
 	GzCoord		vertexList[3];	/* vertex position coordinates */ 
 	GzCoord		normalList[3];	/* vertex normals */ 
+	GzCoord		colorList[3];	/* vertex colors */
 	GzTextureIndex  	uvList[3];		/* vertex texture map indices */ 
 	char		dummy[256]; 
 	int			status; 
