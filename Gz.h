@@ -16,6 +16,8 @@
 #define GZ_POSITION             1
 #define GZ_NORMAL               2
 #define GZ_TEXTURE_INDEX        3
+#define GZ_REFRACT_INDEX        4
+#define GZ_TRIANGLE_COLOR        5
 
 /* renderer-state default pixel color */
 #define GZ_RGB_COLOR            99	
@@ -248,6 +250,12 @@ typedef struct GzVertex
     }
     GzVertex() {
         
+    }
+    void setColor(const float(&col)[3])
+    {
+        color[0] = col[0];
+        color[1] = col[1];
+        color[2] = col[2];
     }
 } GzVertex;
 #endif

@@ -948,8 +948,8 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	//double diffuse = clamp(L * N, 0.0, 1.0);
 	//double specular = clamp(pow(clamp(R * View, 0.0, 1.0), spec), 0.0, 1.0);
 
-	/*GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);*/
-	GzVector3D triangleColor = GzVector3D(1, 1, 0.5);
+	GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);
+	//GzVector3D triangleColor = GzVector3D(1, 1, 0.5);
 	GzVector3D kd = triangleColor;
 	GzVector3D ks = triangleColor;
 
@@ -1107,15 +1107,23 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 	GzCoord* vertices = NULL;
 	GzCoord* normals = NULL;
 	GzTextureIndex* uvlist = NULL;
+	float* refractiveList = NULL;
+	GzCoord* colorList = NULL;
 	for (int i = 0; i < numParts; i++) {
 		if (nameList[i] == GZ_POSITION) {
 			vertices = static_cast<GzCoord*>(valueList[i]);
 		}
 		else if (nameList[i] == GZ_NORMAL) {
-				normals = static_cast<GzCoord*>(valueList[i]);
-			}
+			normals = static_cast<GzCoord*>(valueList[i]);
+		}
 		else if (nameList[i] == GZ_TEXTURE_INDEX) {
 			uvlist = static_cast<GzTextureIndex*>(valueList[i]);
+		}
+		else if (nameList[i] == GZ_REFRACT_INDEX) {
+			refractiveList = static_cast<float*>(valueList[i]);
+		}
+		else if (nameList[i] == GZ_TRIANGLE_COLOR) {
+			colorList = static_cast<GzCoord*>(valueList[i]);
 		}
 	}
 
@@ -1167,8 +1175,17 @@ int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueLis
 		if (vertices != nullptr && normals != nullptr && numTriangles < MAX_TRIANGLES)
 		{
 			GzVertex v0(vertices[0], normals[0]);
+			v0.refract_index = refractiveList[0];
+			v0.setColor(colorList[0]);
+
 			GzVertex v1(vertices[1], normals[1]);
+			v1.refract_index = refractiveList[1];
+			v1.setColor(colorList[1]);
+
 			GzVertex v2(vertices[2], normals[2]);
+			v2.refract_index = refractiveList[2];
+			v2.setColor(colorList[2]);
+
 			triangles[numTriangles] = GzTriangle(v0, v1, v2);
 			numTriangles++;
 		}

@@ -214,11 +214,14 @@ GzMatrix	rotateY =
 
 int Application5::Render() 
 {
-	GzToken		nameListTriangle[3]; 	/* vertex attribute names */
-	GzPointer	valueListTriangle[3]; 	/* vertex attribute pointers */
+	GzToken		nameListTriangle[5]; 	/* vertex attribute names */
+	GzPointer	valueListTriangle[5]; 	/* vertex attribute pointers */
 	GzCoord		vertexList[3];	/* vertex position coordinates */ 
 	GzCoord		normalList[3];	/* vertex normals */ 
+
+	float		refractList[3];
 	GzCoord		colorList[3];	/* vertex colors */
+	
 	GzTextureIndex  	uvList[3];		/* vertex texture map indices */ 
 	char		dummy[256]; 
 	int			status; 
@@ -233,6 +236,8 @@ int Application5::Render()
 	nameListTriangle[0] = GZ_POSITION; 
 	nameListTriangle[1] = GZ_NORMAL; 
 	nameListTriangle[2] = GZ_TEXTURE_INDEX;  
+	nameListTriangle[3] = GZ_REFRACT_INDEX;
+	nameListTriangle[4] = GZ_TRIANGLE_COLOR;
 
 	// I/O File open
 	FILE *infile;
@@ -254,24 +259,33 @@ int Application5::Render()
 	* and render each triangle 
 	*/ 
 	while( fscanf(infile, "%s", dummy) == 1) { 	/* read in tri word */
-	    fscanf(infile, "%f %f %f %f %f %f %f %f", 
+	    fscanf(infile, "%f %f %f %f %f %f %f %f %f %f %f %f", 
 		&(vertexList[0][0]), &(vertexList[0][1]),  
 		&(vertexList[0][2]), 
 		&(normalList[0][0]), &(normalList[0][1]), 	
 		&(normalList[0][2]), 
-		&(uvList[0][0]), &(uvList[0][1]) ); 
-	    fscanf(infile, "%f %f %f %f %f %f %f %f", 
+		&(uvList[0][0]), &(uvList[0][1]),
+		&(refractList[0]),
+		&(colorList[0][0]), &(colorList[0][1]),
+		&(colorList[0][2]));
+		fscanf(infile, "%f %f %f %f %f %f %f %f %f %f %f %f",
 		&(vertexList[1][0]), &(vertexList[1][1]), 	
 		&(vertexList[1][2]), 
 		&(normalList[1][0]), &(normalList[1][1]), 	
 		&(normalList[1][2]), 
-		&(uvList[1][0]), &(uvList[1][1]) ); 
-	    fscanf(infile, "%f %f %f %f %f %f %f %f", 
+		&(uvList[1][0]), &(uvList[1][1]),
+		&(refractList[1]),
+		&(colorList[1][0]), &(colorList[1][1]),
+		&(colorList[1][2]));
+		fscanf(infile, "%f %f %f %f %f %f %f %f %f %f %f %f",
 		&(vertexList[2][0]), &(vertexList[2][1]), 	
 		&(vertexList[2][2]), 
 		&(normalList[2][0]), &(normalList[2][1]), 	
 		&(normalList[2][2]), 
-		&(uvList[2][0]), &(uvList[2][1]) ); 
+		&(uvList[2][0]), &(uvList[2][1]),
+		&(refractList[2]),
+		&(colorList[2][0]), &(colorList[2][1]),
+		&(colorList[2][2]));
 
 	    /* 
 	     * Set the value pointers to the first vertex of the 	
@@ -281,7 +295,9 @@ int Application5::Render()
 	     valueListTriangle[0] = (GzPointer)vertexList; 
 		 valueListTriangle[1] = (GzPointer)normalList; 
 		 valueListTriangle[2] = (GzPointer)uvList; 
-		 m_pRender->GzPutTriangle(3, nameListTriangle, valueListTriangle); 
+		 valueListTriangle[3] = (GzPointer)refractList;
+		 valueListTriangle[4] = (GzPointer)colorList;
+		 m_pRender->GzPutTriangle(5, nameListTriangle, valueListTriangle); 
 	} 
 
 	m_pRender->RayTrace();
