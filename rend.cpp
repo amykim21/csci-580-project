@@ -994,10 +994,11 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firstIntersectPos, int currentIndex)
 {
 	index = -1;
+	int n = 0;
 	for (int i = 0; i < numTriangles; i++)
 	{
 		GzVector3D currIntersectPos;
-		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
+		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos) && currentIndex != i)
 		{
 			// If intersects, check if other triangle has collided with the light yet
 			if (index == -1)
@@ -1014,13 +1015,15 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 				float first_dist = (firstIntersectPos - light.startPoint).norm();
 				float current_dist = (currIntersectPos - light.startPoint).norm();
 
-				if ((current_dist < first_dist) && currentIndex != -1 && currentIndex != i)
+				if (current_dist < first_dist)
 				{
+					n += 1;
 					firstIntersectPos = currIntersectPos;
 				}
 			}
 		}
 	}
+
 	// If index is valid return true
 	return index != -1;
 }
