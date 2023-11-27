@@ -925,33 +925,46 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	GzVector3D view_pos = ray.startPoint;
 
 	// The vector from the surface to light source (normalized) and the vector from the surface to viewer (normalized)
-	GzVector3D light_vec = (light_pos - obj_pos).normalized();
-	GzVector3D view_vec = (view_pos - obj_pos).normalized();
+	GzVector3D light_vec = ( light_pos- obj_pos).normalized();
+	GzVector3D view_vec = (view_pos- obj_pos).normalized();
 	
 	// Calculate L (light direction), N (normal), R (reflected light direction), and View (view direction)
 	GzVector3D L = light_vec.normalized();
 	GzVector3D N = obj_norm.normalized();
+	
+	//GzVector3D View = (obj_pos-GzVector3D(ray.startPoint) ).normalized();
+	float dotProductNormLight = N* light_vec;
+	float dotProductNormView = N* view_vec;
+	if (dotProductNormLight < 0 && dotProductNormView < 0) {
+		// flip normal vector if dot product under zero
+		N[0] = -N[0];
+		N[1] = -N[1];
+		N[2] = -N[2];
+		dotProductNormLight = -dotProductNormLight;
+		dotProductNormView = -dotProductNormView;
+	}
 	GzVector3D R = (2.0 * (N * L) * N - L).normalized();
-	GzVector3D View = (GzVector3D(ray.startPoint) - obj_pos).normalized();
-
 	// Calculate Phong shading components: diffuse and specular
 	//double diffuse = clamp(L * N, 0.0, 1.0);
 	//double specular = clamp(pow(clamp(R * View, 0.0, 1.0), spec), 0.0, 1.0);
 
-	GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);
+	/*GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);*/
+	GzVector3D triangleColor = GzVector3D(1, 1, 0.5);
 	GzVector3D kd = triangleColor;
 	GzVector3D ks = triangleColor;
 
 	// Compute the diffuse part
-	GzVector3D diffuse = kd & lightSource.color * max(obj_norm * light_vec, 0.0);
+	GzVector3D diffuse = kd & lightSource.color * dotProductNormLight;
 
 	// Compute specular part
-	GzFresnel fr = FresnelReflection(ray, intersection, triangles[triangleIndex], depth);
-	GzVector3D specular_part = lightSource.color * pow(clamp(R * view_vec, 0.0, 1.0), spec);
+	float viewerDotReflection = R * view_vec;
+	float PowReflection = pow(clamp(viewerDotReflection, 0.0, 1.0), 2);
+	GzVector3D specular = lightSource.color * PowReflection;
 
-	GzVector3D reflect = fr.reflection_color * fr.reflect_ratio;
-	GzVector3D specular = ks & ((specular_part + reflect) / 2);
-	GzVector3D refract = fr.refraction_color * (1 - fr.reflect_ratio);
+	//GzFresnel fr = FresnelReflection(ray, intersection, triangles[triangleIndex], depth);
+	//GzVector3D reflect = fr.reflection_color * fr.reflect_ratio;
+	//
+	//GzVector3D refract = fr.refraction_color * (1 - fr.reflect_ratio);
 
 	// If the object is in shadow, set the diffuse and specular part to 0
 	GzVector3D firstIntersectPos;
@@ -964,20 +977,20 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 		specular = GzVector3D(0, 0, 0);
 	}
 
-	std::string info = std::to_string(GzCollisionWithTriangle(lightSource, index, firstIntersectPos));
-	OutputDebugStringA(info.c_str());
-	OutputDebugStringA("\n");
-	std::string info1 = std::to_string(diffuse[0]) + " " + std::to_string(diffuse[1]) + " " + std::to_string(diffuse[2]).c_str() + "\n";
-	OutputDebugStringA(info1.c_str());
-	std::string info2 = std::to_string(specular[0]) + " " + std::to_string(specular[1]) + " " + std::to_string(specular[2]).c_str() + "\n";
-	OutputDebugStringA(info2.c_str());
-	std::string info3 = std::to_string(refract[0]) + " " + std::to_string(refract[1]) + " " + std::to_string(refract[2]).c_str() + "\n";
-	OutputDebugStringA(info3.c_str());
-	OutputDebugStringA("\n");
+	//std::string info = std::to_string(GzCollisionWithTriangle(lightSource, index, firstIntersectPos));
+	//OutputDebugStringA(info.c_str());
+	//OutputDebugStringA("\n");
+	//std::string info1 = std::to_string(diffuse[0]) + " " + std::to_string(diffuse[1]) + " " + std::to_string(diffuse[2]).c_str() + "\n";
+	//OutputDebugStringA(info1.c_str());
+	//std::string info2 = std::to_string(specular[0]) + " " + std::to_string(specular[1]) + " " + std::to_string(specular[2]).c_str() + "\n";
+	//OutputDebugStringA(info2.c_str());
+	//std::string info3 = std::to_string(refract[0]) + " " + std::to_string(refract[1]) + " " + std::to_string(refract[2]).c_str() + "\n";
+	//OutputDebugStringA(info3.c_str());
+	//OutputDebugStringA("\n");
 
 	// Total color is the sum of the ambient, diffuse and specular color
 	//GzVector3D color = diffuse + specular + refract;
-	GzVector3D color = diffuse + ks & specular_part;
+	GzVector3D color = diffuse + (ks & specular);
 
 	return color;
 }
@@ -997,7 +1010,7 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 	for (int i = 0; i < numTriangles; i++)
 	{
 		GzVector3D currIntersectPos;
-		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
+		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos) && currentIndex != i)
 		{
 			// If intersects, check if other triangle has collided with the light yet
 			if (index == -1)
@@ -1014,7 +1027,7 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 				float first_dist = (firstIntersectPos - light.startPoint).norm();
 				float current_dist = (currIntersectPos - light.startPoint).norm();
 
-				if ((current_dist < first_dist) && currentIndex != -1 && currentIndex != i)
+				if ((current_dist < first_dist))
 				{
 					firstIntersectPos = currIntersectPos;
 				}
