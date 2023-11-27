@@ -905,7 +905,7 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	GzVertex intersection_norm = getTriangleNormal(triangles[index], intersection_pos);
 	GzVertex intersection_vertex = GzVertex(intersection_pos.position, intersection_norm.normal);
 	
-	GzRay lightSource = GzRay(GzVector3D(0, 2, -1), GzVector3D(0, -1, 1), GzVector3D(1, 1, 1));
+	GzRay lightSource = GzRay(GzVector3D(0, 100, -1), GzVector3D(0, -1, 1), GzVector3D(1, 1, 1));
 	// Initialize color with ambient light
 	GzVector3D ambient = GzVector3D(Ka) & lightSource.color;
 
