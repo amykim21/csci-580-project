@@ -750,7 +750,7 @@ GzVertex getTriangleNormal(GzTriangle triangle, GzVertex intersection) {
         normal.normal[i] /= length;
     }
 
-    return normal;
+return normal;
 }
 
 /**
@@ -763,40 +763,37 @@ bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 	shadowRay.direction.position[1] = light.position[1] - intersection.position[1];
 	shadowRay.direction.position[2] = light.position[2] - intersection.position[2];
 
-	
+
 	for (int i = 0; i < numTriangles; i++) {
-		int t; // 
+		int t; //
 		//
 		bool collision = GzCollisionWithSpecificTriangle(shadowRay, triangles[i], t);
 
-		// 
-		// 
+		//
+		//
 		if (collision && t >= 0 && t <= 1) {
 			return true;
 		}
 	}
 
-	// 
+	//
 	return false;
 }
 */
 
-void GzRender::RayTrace(){
+void GzRender::RayTrace() {
 	float d = tan((m_camera.FOV / 2) * (PI / 180));
 	float aspect_ratio = 1.0 * xres / yres;
-	for(int i = 0; i < xres; i++) {
-		for(int j = 0; j < yres; j++) {
+	for (int i = 0; i < xres; i++) {
+		for (int j = 0; j < yres; j++) {
 			float x = (2 * (i + 0.5) / xres - 1) * d * aspect_ratio;
 			float y = (1 - 2 * (j + 0.5) / yres) * d;
 			GzVector3D color = EmitLight(GzRay(GzVector3D(0, 0, -1), GzVector3D(x, y, 1)), 1);
-
-			std::string info = std::to_string(color[RED]) + " " + std::to_string(color[GREEN]) + " " + std::to_string(color[BLUE]).c_str() + ", ";
-			OutputDebugStringA(info.c_str());
-
 			GzDepth z = 0;
 			GzPut(i, j, ctoi(color[RED]), ctoi(color[GREEN]), ctoi(color[BLUE]), 1, z);
 		}
-		OutputDebugStringA("\n");
+		std::string info = "Rendering: (" + std::to_string(i + 1) + "/" + std::to_string(xres) + ")\n";
+		OutputDebugStringA(info.c_str());
 	}
 }
 
@@ -814,60 +811,34 @@ GzVector3D GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTri
 	// Equation source: An improved illumination model for shaded display, Sec 2 Improved model
 	// The total light color will be: (ambient color) + kd * (sum of diffuse lights) + ks * (reflect light, also known as specular) + kt * (refract light)
 
+	GzVector3D lightDir = GzVector3D(light.direction).normalized();
 	GzVertex N_vertex = getTriangleNormal(triangle, intersection);	// Compute normal vector at intersection point
-	GzVector3D normal = GzVector3D(N_vertex.normal);
+	GzVector3D normal = GzVector3D(N_vertex.normal).normalized();
+	GzVector3D normalLight = (normal * lightDir < 0) ? normal : normal * -1;	// Normal vector from light side
+
 	GzVector3D intersection_pos = GzVector3D(intersection.position);
 	float n_air = 1; // Refractive index of air, 1.0003
 	float n1, n2;	// (Incoming n1), (refracting n2) for the refractive index
 
-	// If dot of normal and light are positive, then the light comes from air(same direction)
-	GzVector3D lightDir = GzVector3D(light.direction);
-
-	if (lightDir * normal > 0)
+	// If dot of normal and normal(light side) are positive, then the light comes from air(same direction)
+	bool from_air = (normal * normalLight > 0);
+	float n;
+	if (from_air)
 	{
 		// Then air will be incoming n1, the material will be refract n2
 		n1 = n_air;
 		n2 = triangle.v[0].refract_index;
+		n = n1 / n2;
 	}
 	else
 	{
 		// Then material will be incoming n, the air will be refract n
 		n1 = triangle.v[0].refract_index;
 		n2 = n_air;
+		n = n1 / n2;
 	}
 
-	// Get cos & sin of incoming light vector and normal vector
-	float cos_incoming = lightDir * normal;
-	float sin_incoming = sqrt(1 - pow(cos_incoming, 2));	// sin2 + cos2 = 1
-
-	// Compute Directions
-	GzVector3D reflectDir = lightDir - 2 * normal * cos_incoming;	// Reflect = L - 2(L dot N)N
-	float sin_refracting = (n1 / n2) * sin_incoming;	// n1 * sin_incoming = n2 * sin_refracting
-	float cos_refracting = sqrt(1 - pow(sin_refracting, 2));	// sin2 + cos2 = 1
-	// Calculate the incoming light's vector portion that is perpendicular to normal, which call tangent vector
-	GzVector3D tangentVec = (lightDir - cos_incoming * normal) / sin_incoming;	// Tangent vector portion of incoming light
-	// Convert tangent vector into refract light direction
-	GzVector3D refractDir = tangentVec * sin_refracting - normal * cos_refracting;
-
-
-	// Schlick’s model
-	float r0 = pow(n1 - n2, 2) / pow(n1 + n2, 2);
-
-	// Get Reflect and Refract ratio
-	float reflectRatio = r0 + (1 - r0) * (1 - cos_incoming);
-	float refractRatio = 1 - reflectRatio;
-
-
-	// Compute Rays
-	GzRay reflectedRay = GzRay(intersection_pos, reflectDir);
-	GzRay refractedRay = GzRay(intersection_pos, refractDir);
-
-	// Calculate the color of the reflection
-	GzVector3D reflectedColor = EmitLight(reflectedRay, depth + 1);
-	GzVector3D refractedColor = EmitLight(refractedRay, depth + 1);
-
-	// Compute total color
-	// TODO: Diffuse color formula undecided
+	/// Diffuse color
 	float r1 = (rand() / (float)RAND_MAX) * 2 * PI;	// Rand samples fron 0 to RAND_MAX, scale it to 2 pi
 	float r2 = (rand() / (float)RAND_MAX) * PI / 2;	// vertical angle from 0 to pi / 2
 
@@ -877,13 +848,77 @@ GzVector3D GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTri
 
 	GzVector3D diffuseDir = (NX * cos(r1) * sin(r2) + NY * sin(r1) * sin(r2) + normal * cos(r2)).normalized();
 	GzRay diffuseRay = GzRay(intersection_pos, diffuseDir);
-
 	// Color of incoming light for diffuse
 	GzVector3D diffuseRayColor = EmitLight(diffuseRay, depth + 1);
 	// Color of outgoing light for diffuse, le * (N dot L)
-	// Total color
 	GzVector3D diffuseColor = /**Kd * */diffuseRayColor * (normal * diffuseDir);
-	GzVector3D totalColor = reflectRatio * reflectedColor + refractRatio * refractedColor + diffuseColor + 0.2;
+
+
+	/// Reflections and refractions
+	// Get cos & sin of incoming light vector and normal vector
+	float cos_incoming = lightDir * normalLight;
+
+	// Reflect light direction
+	GzVector3D reflectDir = lightDir - normal * 2 * (normal * lightDir);	// Reflect = L - 2(L dot N)N
+
+	float ambientColor = 0.1;
+	float kDiffuse = 0.3;
+	float kSpec = 0.7;
+	float reflectRatio;
+	float refractRatio;
+	GzRay reflectedRay;
+	GzRay refractedRay;
+	GzVector3D reflectedColor;
+	GzVector3D refractedColor;
+	GzVector3D totalColor;
+	float cos2t = 1 - pow(n, 2) * (1 - cos_incoming * cos_incoming);
+	if (cos2t < 0)
+	{
+		// Total reflection
+		reflectRatio = 1;
+		// Compute Rays
+		reflectedRay = GzRay(intersection_pos, reflectDir);
+		// Calculate the color of the reflection
+		reflectedColor = EmitLight(reflectedRay, depth + 1);
+
+		// Compute total color
+		totalColor = ambientColor + kDiffuse * diffuseColor + kSpec * (reflectRatio * reflectedColor);
+	}
+	else
+	{
+		// Refract light direction
+		GzVector3D refractDir = lightDir * n - n * ((from_air ? 1 : -1) * (cos_incoming * normal + sqrt(cos2t))).normalized();
+		// Schlick’s model
+		float r0 = pow(n1 - n2, 2) / pow(n1 + n2, 2);
+		reflectRatio = r0 + (1 - r0) * pow(1 - (from_air ? cos_incoming * -1 : refractDir * normal), 5);
+		refractRatio = 1 - reflectRatio;
+
+		// Compute Rays
+		reflectedRay = GzRay(intersection_pos, reflectDir);
+		refractedRay = GzRay(intersection_pos, refractDir);
+		reflectedColor = EmitLight(reflectedRay, depth + 1);
+		// Calculate the color of the reflection
+		refractedColor = EmitLight(refractedRay, depth + 1);
+
+		// Compute total color
+		totalColor = ambientColor + kDiffuse * diffuseColor + kSpec * (reflectRatio * reflectedColor + refractRatio * refractedColor);
+	}
+
+	std::string info = std::to_string(cos2t < 0);
+	//OutputDebugStringA(info.c_str());
+	//OutputDebugStringA("\n");
+	std::string info1 = std::to_string(reflectRatio) + " " + std::to_string(refractRatio) + " " + std::to_string(depth).c_str() + "\n";
+	//OutputDebugStringA(info1.c_str());
+	std::string info2 = std::to_string(reflectedColor[0]) + " " + std::to_string(reflectedColor[1]) + " " + std::to_string(reflectedColor[2]).c_str() + "\n";
+	//OutputDebugStringA(info2.c_str());
+	std::string info3 = std::to_string(refractedColor[0]) + " " + std::to_string(refractedColor[1]) + " " + std::to_string(refractedColor[2]).c_str() + "\n";
+	//OutputDebugStringA(info3.c_str());
+	std::string info4 = std::to_string(diffuseColor[0]) + " " + std::to_string(diffuseColor[1]) + " " + std::to_string(diffuseColor[2]).c_str() + "\n";
+	//OutputDebugStringA(info4.c_str());
+	std::string info5 = std::to_string(totalColor[0]) + " " + std::to_string(totalColor[1]) + " " + std::to_string(totalColor[2]).c_str() + "\n";
+	//OutputDebugStringA(info5.c_str());
+
+	//OutputDebugStringA("\n");
 
 	return totalColor;
 }
@@ -908,6 +943,29 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	// TODO: negotiate how to call intersectScene (Kevin)
     if (!GzCollisionWithTriangle(ray, index, intersection)/*intersectObject(ray, intersection)*/)
 	{ 
+		// Light source for the final color.
+		// 1. Define the radius of the light source.
+		// 2. Do the collision detection by CollisionWithSphere.
+		// 3. Set the light source color.    One white light and one color light.
+		double dist_placeholder;
+		GzVector3D lightSourcePos = GzVector3D(0, 5, -1);
+		GzVector3D lightSourceColor = GzVector3D(1, 1, 1);
+		float lightSourceRadius = 1;
+
+		if (RayIntersectsSphere(ray.startPoint.GetDoubleArr(), ray.direction.GetDoubleArr(), lightSourcePos.GetDoubleArr(), lightSourceRadius, dist_placeholder))
+		{
+			return lightSourceColor;
+		}
+		/**
+		for (GzSphere sp : lightSources)
+		{
+			double dist_placeholder;
+			if (RayIntersectsSphere(ray.startPoint.GetDoubleArr(), ray.direction.GetDoubleArr(), sp.position, sp.radius, dist_placeholder))
+			{
+				return GzVector3D(sp.color_diffuse);
+			}
+		}
+		*/
         return GzVector3D(0, 0, 0); // just black is ok
     }
 
@@ -916,38 +974,7 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	// Calculate the color based on the Phong model
     //VectorCoord localColor = phongModel(Ray(startPoint, direction), hit);
 	GzVertex intersection_vertex = GzVertex(intersection[0], intersection[1], intersection[2]);
-	GzVector3D localColor = FresnelReflection(ray, intersection_vertex, triangles[index], depth);
-
-    // Light source for the final color.
-    // 1. Define the radius of the light source.
-    // 2. Do the collision detection by CollisionWithSphere.
-    // 3. Set the light source color.    One white light and one color light.
-	
-	double dist_placeholder;
-	GzVector3D lightSourcePos = GzVector3D(0, 2, -1);
-	GzVector3D lightSourceColor = GzVector3D(1, 1, 1);
-	float lightSourceRadius = 1;
-
-	if (RayIntersectsSphere(ray.startPoint.GetDoubleArr(), ray.direction.GetDoubleArr(), lightSourcePos.GetDoubleArr(), lightSourceRadius, dist_placeholder))
-	{
-		return lightSourceColor;
-	}
-
-	/**
-	for (GzSphere sp : lightSources)
-	{
-		double dist_placeholder;
-		if (RayIntersectsSphere(ray.startPoint.GetDoubleArr(), ray.direction.GetDoubleArr(), sp.position, sp.radius, dist_placeholder))
-		{
-			return GzVector3D(sp.color_diffuse);
-		}
-	}
-	*/
-
-    // The overall color is a combination of the color computed from the Phong model and the color of the reflection
-    //VectorCoord color = localColor + reflectedColor * 0.8;
-    
-    return localColor;
+	return FresnelReflection(ray, intersection_vertex, triangles[index], depth);
 }
 
 /**
@@ -966,7 +993,6 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 		GzVector3D currIntersectPos;
 		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
 		{
-			OutputDebugStringA("Collided\n");
 			// If intersects, check if other triangle has collided with the light yet
 			if (index == -1)
 			{
@@ -1150,6 +1176,7 @@ bool GzRender::RayIntersectsSphere(const double origin[3], const double directio
     double b = 2 * dotArray(oc, direction);
     double c = dotArray(oc, oc) - radius * radius;
     double discriminant = b * b - 4 * c;
+
     if (discriminant < 0) {
         return false; // No intersection
     } else {

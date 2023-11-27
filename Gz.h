@@ -177,7 +177,7 @@ typedef struct GzVector3D {
 
     // Retrieve a copy of array in double
     double* GetDoubleArr() {
-        static double output[3] = {
+        double output[3] = {
             (double)arr[0],
             (double)arr[1],
             (double)arr[2] };

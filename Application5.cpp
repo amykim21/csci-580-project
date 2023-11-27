@@ -100,6 +100,7 @@ GzMatrix	rotateY =
 }; 
 
 #if 1 	/* set up app-defined camera if desired, else use camera defaults */
+	/**
     camera.position[X] = -3;
     camera.position[Y] = -25;
     camera.position[Z] = -4;
@@ -108,11 +109,25 @@ GzMatrix	rotateY =
     camera.lookat[Y] = 0.7;
     camera.lookat[Z] = 6.5;
 
-    camera.worldup[X] = -0.2;
+	camera.worldup[X] = 0;// -0.2;
     camera.worldup[Y] = 1.0;
     camera.worldup[Z] = 0.0;
 
-    camera.FOV = 63.7;              /* degrees *              /* degrees */
+    camera.FOV = 63.7;
+	*/
+	camera.position[X] = 13.2;
+	camera.position[Y] = -18.7;//-8.7;
+	camera.position[Z] = -24.8;//-14.8
+
+	camera.lookat[X] = 0.8;
+	camera.lookat[Y] = 0.7;
+	camera.lookat[Z] = 4.5;
+
+	camera.worldup[X] = -0.2;
+	camera.worldup[Y] = 1.0;
+	camera.worldup[Z] = 0.0;
+
+	camera.FOV = 53.7;  
 
 	status |= m_pRender->GzPutCamera(camera); 
 #endif 
