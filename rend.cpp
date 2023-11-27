@@ -1007,10 +1007,12 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firstIntersectPos, int currentIndex)
 {
 	index = -1;
+	float t_min = 1000000;
 	for (int i = 0; i < numTriangles; i++)
 	{
 		GzVector3D currIntersectPos;
-		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
+		float t = -1;
+		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos,t))
 		{
 			// If intersects, check if other triangle has collided with the light yet
 			if (index == -1)
@@ -1018,17 +1020,19 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 				// Light not collide with other triangles yet
 				index = i;
 				firstIntersectPos = currIntersectPos;
+				t_min = t;
 			}
 			else
 			{
 				// Light collided with other triangles before, check intersection position
 				// The closet position to start point will be the first intersection
 
-				float first_dist = (firstIntersectPos - light.startPoint).norm();
-				float current_dist = (currIntersectPos - light.startPoint).norm();
+				
 
-				if ((current_dist < first_dist))
+				if ((t < t_min))
 				{
+					index = i;
+					t_min = t;
 					firstIntersectPos = currIntersectPos;
 				}
 			}
@@ -1046,7 +1050,7 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
  * @param intersectPos The intersecting point as array pointer
  * @return A boolean indiciating if the light is colliding with the input triangle
  */
-bool GzRender::GzCollisionWithSpecificTriangle(GzRay ray, GzTriangle triangle, GzVector3D& intersectPos)
+bool GzRender::GzCollisionWithSpecificTriangle(GzRay ray, GzTriangle triangle, GzVector3D& intersectPos,float &t_min)
 {
 	GzVector3D e1, e2;
 	GzVector3D P, Q, T;
@@ -1084,6 +1088,7 @@ bool GzRender::GzCollisionWithSpecificTriangle(GzRay ray, GzTriangle triangle, G
 	if (t > 0.0001)
 	{
 		intersectPos = ray.startPoint + ray.direction * t;
+		t_min = t;
 		return true;
 	}
 

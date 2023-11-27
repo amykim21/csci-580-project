@@ -93,7 +93,7 @@ public:
 	GzFresnel FresnelReflection(GzRay light, GzVertex intersection, GzTriangle triangle, int depth);
 	GzVector3D EmitLight(GzRay ray, int depth);
 	bool GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firstIntersectPos, int currentIndex = -1);
-	bool GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D& intersectPos);
+	bool GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D& intersectPos,float& t_min);
 
 	bool RayIntersectsSphere(const double origin[3], const double direction[3], const double center[3], double radius, double& t);
 	bool GzCollisionWithSphere(GzRay light, int& index);
