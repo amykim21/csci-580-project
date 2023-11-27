@@ -122,6 +122,14 @@ typedef struct GzVector3D {
             arr[2] - other.arr[2]);
     }
 
+    // Overloading & operator for vector multiply
+    GzVector3D operator&(const GzVector3D& other) const {
+        return GzVector3D(
+            arr[0] * other.arr[0],
+            arr[1] * other.arr[1],
+            arr[2] * other.arr[2]);
+    }
+
     // Overloading * operator for Dot product
     float operator*(const GzVector3D& other) const {
         return arr[0] * other.arr[0] + arr[1] * other.arr[1] + arr[2] * other.arr[2];
@@ -196,6 +204,21 @@ typedef struct GzVector3D {
 } GzVector3D;
 #endif
 
+#ifndef GZFRESNEL
+#define GZFRESNEL
+typedef struct GzFresnel
+{
+    GzVector3D reflection_color;
+    GzVector3D refraction_color;
+    float reflect_ratio;
+    GzFresnel(GzVector3D reflectCol, GzVector3D refractCol, float reflect_rto) {
+        GzVector3D reflection_color = reflectCol;
+        GzVector3D refraction_color = refractCol;
+        float reflect_ratio = reflect_rto;
+    }
+} GzFresnel;
+#endif
+
 #ifndef GZVERTEX
 #define GZVERTEX
 typedef struct GzVertex
@@ -205,6 +228,7 @@ typedef struct GzVertex
     float refract_index = (float)1.52;
 
     float position[3];
+    float color[3];
     float color_diffuse[3];
     float color_specular[3];
     float normal[3];
@@ -248,11 +272,17 @@ typedef struct GzTriangle
 typedef struct GzRay {
   public:
     GzRay() {}
+
     GzRay(GzVector3D start, GzVector3D dir) {
         startPoint = start;
         direction = dir;
     };
-    GzVector3D startPoint, direction;
+    GzRay(GzVector3D start, GzVector3D dir, GzVector3D col) {
+        startPoint = start;
+        direction = dir;
+        color = col;
+    };
+    GzVector3D startPoint, direction, color;
 } GzRay;
 #endif
 
