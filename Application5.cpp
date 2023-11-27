@@ -117,7 +117,7 @@ GzMatrix	rotateY =
 	*/
 	camera.position[X] = 13.2;
 	camera.position[Y] = -18.7;//-8.7;
-	camera.position[Z] = -24.8;//-14.8
+	camera.position[Z] = -44.8;//-14.8
 
 	camera.lookat[X] = 0.8;
 	camera.lookat[Y] = 0.7;
