@@ -1010,7 +1010,7 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 	for (int i = 0; i < numTriangles; i++)
 	{
 		GzVector3D currIntersectPos;
-		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos) && currentIndex != i)
+		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos))
 		{
 			// If intersects, check if other triangle has collided with the light yet
 			if (index == -1)
@@ -1046,43 +1046,49 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
  * @param intersectPos The intersecting point as array pointer
  * @return A boolean indiciating if the light is colliding with the input triangle
  */
-bool GzRender::GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D& intersectPos)
+bool GzRender::GzCollisionWithSpecificTriangle(GzRay ray, GzTriangle triangle, GzVector3D& intersectPos)
 {
+	GzVector3D e1, e2;
+	GzVector3D P, Q, T;
+	float det, inv_det, u, v;
+	float t;
 	GzVector3D vertexA_pos = GzVector3D(triangle.v[0].position);
 	GzVector3D vertexB_pos = GzVector3D(triangle.v[1].position);
 	GzVector3D vertexC_pos = GzVector3D(triangle.v[2].position);
-	// Cross product of two edges that normal to triangle-position-plane, normalized
-	GzVector3D triangle_plane_norm = ((vertexB_pos - vertexA_pos) ^ (vertexC_pos - vertexA_pos)).normalized();	
+	e1 = vertexB_pos - vertexA_pos;
+	e2 = vertexC_pos - vertexA_pos;
 
-	// If flat triangle normal perpendicular to light, then no intersection in terms of direction
-	if (abs(triangle_plane_norm * light.direction) < 0.0001)
-	{
+	P = ray.direction ^ e2;
+
+	det = e1 * P;
+
+	if (det > -0.0001 && det < 0.0001)
 		return false;
+
+	inv_det = 1.0 / det;
+	T = ray.startPoint - triangle.v[0].position;
+
+	u = (T * P) * inv_det;
+
+	if (u < 0.0 || u > 1.0)
+		return false;
+
+	Q = T ^ e1;
+	v = (ray.direction * Q) * inv_det;
+
+	if (v < 0.0 || u + v  > 1.0)
+		return false;
+
+	t = (e2 * Q) * inv_det;
+
+	if (t > 0.0001)
+	{
+		intersectPos = ray.startPoint + ray.direction * t;
+		return true;
 	}
 
-	// Compute intersection point(with triangle's plane)
-	// d = plane_normal dot x
-	// t = (d - plane_normal dot origin) / (plane_normal dot direction)
-	float d = triangle_plane_norm * vertexA_pos;
-	double t = (d - (triangle_plane_norm * light.startPoint)) / (triangle_plane_norm * light.direction);
-	intersectPos = light.startPoint + t * light.direction;
-
-	// Check if the point is within triangle
-	GzVector3D AB = vertexB_pos - vertexA_pos;
-	GzVector3D AQ = intersectPos - vertexA_pos;
-	bool test1 = ((AB ^ AQ) * triangle_plane_norm) >= 0;
-
-	GzVector3D BC = vertexC_pos - vertexB_pos;
-	GzVector3D BQ = intersectPos - vertexB_pos;
-	bool test2 = ((BC ^ BQ) * triangle_plane_norm) >= 0;
-	
-	GzVector3D CA = vertexA_pos - vertexC_pos;
-	GzVector3D CQ = intersectPos - vertexC_pos;
-	bool test3 = ((CA ^ CQ) * triangle_plane_norm) >= 0;
-
-	return test1 && test2 && test3;
+	return false;
 }
-
 int GzRender::GzPutTriangle(int numParts, GzToken* nameList, GzPointer* valueList)
 /* numParts - how many names and values */
 {
