@@ -901,10 +901,15 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	{ 
         return GzVector3D(0, 0, 0); // just black is ok
     }
-	GzVertex intersection_vertex = GzVertex(intersection[0], intersection[1], intersection[2]);
+	GzVertex intersection_pos = GzVertex(intersection[0], intersection[1], intersection[2]);
+	GzVertex intersection_norm = getTriangleNormal(triangles[index], intersection_pos);
+	GzVertex intersection_vertex = GzVertex(intersection_pos.position, intersection_norm.normal);
 	
-	GzRay lightSource(GzVector3D(0, 1, -1), GzVector3D(0, -1, 1), GzVector3D(1, 1, 1));
-	return PhongModel(ray, intersection_vertex, lightSource, triangles[index], depth);
+	GzRay lightSource = GzRay(GzVector3D(0, 2, -1), GzVector3D(0, -1, 1), GzVector3D(1, 1, 1));
+	// Initialize color with ambient light
+	GzVector3D ambient = GzVector3D(Ka) & lightSource.color;
+
+	return ambient + PhongModel(ray, intersection_vertex, lightSource, index, depth);
 }
 
 double clamp(double value, double low, double high)
@@ -912,7 +917,7 @@ double clamp(double value, double low, double high)
 	return max(min(value, 1.0), 0.0);
 }
 
-GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSource, GzTriangle triangle, int depth) {
+GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSource, int triangleIndex, int depth) {
 	// Acquire light position, object position and viewpoint position.
 	GzVector3D light_pos = lightSource.startPoint;
 	GzVector3D obj_pos = GzVector3D(intersection.position);
@@ -922,7 +927,7 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	// The vector from the surface to light source (normalized) and the vector from the surface to viewer (normalized)
 	GzVector3D light_vec = (light_pos - obj_pos).normalized();
 	GzVector3D view_vec = (view_pos - obj_pos).normalized();
-
+	
 	// Calculate L (light direction), N (normal), R (reflected light direction), and View (view direction)
 	GzVector3D L = light_vec.normalized();
 	GzVector3D N = obj_norm.normalized();
@@ -933,18 +938,15 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	//double diffuse = clamp(L * N, 0.0, 1.0);
 	//double specular = clamp(pow(clamp(R * View, 0.0, 1.0), spec), 0.0, 1.0);
 
-	GzVector3D triangleColor = GzVector3D(triangle.v[0].color);
+	GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);
 	GzVector3D kd = triangleColor;
 	GzVector3D ks = triangleColor;
-
-	// Initialize color with ambient light
-	GzVector3D ambient = GzVector3D(Ka) & lightSource.color;
 
 	// Compute the diffuse part
 	GzVector3D diffuse = kd & lightSource.color * max(obj_norm * light_vec, 0.0);
 
 	// Compute specular part
-	GzFresnel fr = FresnelReflection(ray, intersection, triangle, depth);
+	GzFresnel fr = FresnelReflection(ray, intersection, triangles[triangleIndex], depth);
 	GzVector3D specular_part = lightSource.color * pow(clamp(R * view_vec, 0.0, 1.0), spec);
 
 	GzVector3D reflect = fr.reflection_color * fr.reflect_ratio;
@@ -954,14 +956,28 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	// If the object is in shadow, set the diffuse and specular part to 0
 	GzVector3D firstIntersectPos;
 	int index;
-	if (GzCollisionWithTriangle(lightSource, index, firstIntersectPos))
+
+	GzRay shadowLight = GzRay(obj_pos, light_vec);
+	if (GzCollisionWithTriangle(shadowLight, index, firstIntersectPos, triangleIndex))
 	{
 		diffuse = GzVector3D(0, 0, 0);
 		specular = GzVector3D(0, 0, 0);
 	}
 
+	std::string info = std::to_string(GzCollisionWithTriangle(lightSource, index, firstIntersectPos));
+	OutputDebugStringA(info.c_str());
+	OutputDebugStringA("\n");
+	std::string info1 = std::to_string(diffuse[0]) + " " + std::to_string(diffuse[1]) + " " + std::to_string(diffuse[2]).c_str() + "\n";
+	OutputDebugStringA(info1.c_str());
+	std::string info2 = std::to_string(specular[0]) + " " + std::to_string(specular[1]) + " " + std::to_string(specular[2]).c_str() + "\n";
+	OutputDebugStringA(info2.c_str());
+	std::string info3 = std::to_string(refract[0]) + " " + std::to_string(refract[1]) + " " + std::to_string(refract[2]).c_str() + "\n";
+	OutputDebugStringA(info3.c_str());
+	OutputDebugStringA("\n");
+
 	// Total color is the sum of the ambient, diffuse and specular color
-	GzVector3D color = ambient + diffuse + specular + refract;
+	//GzVector3D color = diffuse + specular + refract;
+	GzVector3D color = diffuse + ks & specular_part;
 
 	return color;
 }
@@ -972,9 +988,10 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
  * @param light The input light for collision detection
  * @param index The output index of first colliding triangle
  * @param firstIntersectPos The first position of intersection
+ * @param currentIndex The index of current using triangle(will not collide)
  * @return A boolean indiciating if the light is colliding with any triangle
  */
-bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firstIntersectPos)
+bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firstIntersectPos, int currentIndex)
 {
 	index = -1;
 	for (int i = 0; i < numTriangles; i++)
@@ -997,7 +1014,7 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 				float first_dist = (firstIntersectPos - light.startPoint).norm();
 				float current_dist = (currIntersectPos - light.startPoint).norm();
 
-				if (current_dist < first_dist && current_dist > 0.0001)
+				if ((current_dist < first_dist) && currentIndex != -1 && currentIndex != i)
 				{
 					firstIntersectPos = currIntersectPos;
 				}
