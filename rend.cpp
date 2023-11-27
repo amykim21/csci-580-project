@@ -884,7 +884,12 @@ GzFresnel GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTria
 
 	return GzFresnel(reflectedColor, refractedColor, reflectRatio);
 }
-
+GzVector3D ClampVector(GzVector3D vec) {
+	for (int i = 0; i < 3; ++i) {
+		vec.arr[i] = max(0.0f, min(1.0f, vec.arr[i]));
+	}
+	return vec;
+}
 GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
 {
 	int maxDepth = 5;
@@ -909,7 +914,7 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	// Initialize color with ambient light
 	GzVector3D ambient = GzVector3D(Ka) & lightSource.color;
 
-	return ambient + PhongModel(ray, intersection_vertex, lightSource, index, depth);
+	return ClampVector( ambient + PhongModel(ray, intersection_vertex, lightSource, index, depth));
 }
 
 double clamp(double value, double low, double high)
@@ -991,7 +996,9 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	// Total color is the sum of the ambient, diffuse and specular color
 	//GzVector3D color = diffuse + specular + refract;
 	GzVector3D color = diffuse + (ks & specular);
-
+	if(abs(color.arr[0]-1)<0.1&& color.arr[1] <0.2){
+		printf("1");
+	}
 	return color;
 }
 
