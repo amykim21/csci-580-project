@@ -885,7 +885,7 @@ GzFresnel GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTria
 	return GzFresnel(reflectedColor, refractedColor, reflectRatio);
 }
 
-GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
+GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 {
 	int maxDepth = 5;
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
