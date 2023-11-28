@@ -16,6 +16,7 @@
 
 #include	"rend.h"
 
+int bspMode = 0; // toggle bsp tree on and off, 0 is off, 1 is on
 #define PI (float) 3.14159265358979323846
 #define DEG2RAD(degree) ((degree) * (PI / 180.0))
 typedef std::vector<float> VectorCoord;
@@ -620,6 +621,143 @@ int GzRender::GzFlushDisplay2FrameBuffer()
 /***********************************************/
 /* HW2 methods: implement from here */
 
+class BSPNode {
+public:
+	GzVector3D partitionPlane; // The plane that divides the space at this node
+	BSPNode* front;       // Pointer to the front child node
+	BSPNode* back;        // Pointer to the back child node
+	std::vector<GzTriangle*> objects; // Objects contained in this node (for leaf nodes)
+
+	BSPNode() : front(nullptr), back(nullptr) {}
+
+	~BSPNode() {
+		// Recursively delete child nodes
+		delete front;
+		delete back;
+	}
+
+	bool isLeaf() const {
+		// If there are no children, this is a leaf node
+		return !front && !back;
+	}
+};
+
+class BSPTree {
+
+
+public:
+	BSPNode* root;
+
+	BSPTree() : root(nullptr) {}
+
+	~BSPTree() {
+		delete root;
+	}
+
+	// Recursively build the BSP tree from a list of objects
+	BSPNode* buildTree(const std::vector<GzTriangle*>& objects, int depth = 0) {
+		if (objects.empty() || depth > 20) { // max depth
+			return nullptr;
+		}
+
+		BSPNode* node = new BSPNode();
+
+		GzVector3D partitionPlane = choosePartitionPlane(objects, 0);
+		std::vector<GzTriangle*> frontObjects;
+		std::vector<GzTriangle*> backObjects;
+		partitionObjects(objects, partitionPlane, frontObjects, backObjects, 0);
+
+		node->partitionPlane = partitionPlane;
+		node->front = buildTree(frontObjects, depth + 1);
+		node->back = buildTree(backObjects, depth + 1);
+
+		// If this is a leaf node, assign the objects to this node
+		if (node->isLeaf()) {
+			node->objects = objects;
+		}
+
+		return node;
+	}
+
+	// Traverse the BSP tree with a ray to find the closest intersection
+	GzTriangle* traverse(GzRay ray, BSPNode* node, float& closestDistance, int distance) {
+		if (distance > 0) {
+			if (!node || node->isLeaf()) {
+				return findClosestIntersection(ray, node->objects, closestDistance);
+			}
+
+			// Determine the order to traverse front and back child based on the ray direction
+			bool frontFirst;
+			BSPNode* firstChild = frontFirst ? node->front : node->back;
+			BSPNode* secondChild = frontFirst ? node->back : node->front;
+
+			// Traverse the first child
+			GzTriangle* closestObject = traverse(ray, firstChild, closestDistance, 0);
+
+			// If the closest intersection is further than the partition plane, also check the second child
+			if (closestDistance > distance) {
+				GzTriangle* secondClosestObject = traverse(ray, secondChild, closestDistance, 0);
+				if (secondClosestObject) {
+					closestObject = secondClosestObject;
+				}
+			}
+
+			return closestObject;
+		}
+		else {
+			return nullptr;
+		}
+	}
+
+private:
+	GzVector3D BSPTree::choosePartitionPlane(const std::vector<GzTriangle*>& objects, int position) {
+		// Simple heuristic: Use the average position of objects to define the plane
+		int averagePosition;
+		for (const auto& object : objects) {
+			averagePosition += position;
+		}
+
+		// Use the normal of one of the objects as the plane normal
+		// or calculate the normal based on object positions for a more complex heuristic
+		GzVector3D normal; // Assume `getNormal` is a method that returns object's normal
+
+		// Create a plane using the average position and the chosen normal
+		GzVector3D partitionPlane(normal);
+		return partitionPlane;
+	}
+
+
+	void BSPTree::partitionObjects(const std::vector<GzTriangle*>& objects, const GzVector3D plane,
+		std::vector<GzTriangle*>& frontObjects, std::vector<GzTriangle*>& backObjects, int distance) {
+		for (const auto& object : objects) {
+			if (distance > 0) {
+				frontObjects.push_back(object);
+			}
+			else if (distance < 0) {
+				backObjects.push_back(object);
+			}
+			else {
+				// Object intersects the plane; split the object or place it in both lists
+				frontObjects.push_back(object);
+				backObjects.push_back(object);
+			}
+		}
+	}
+
+
+	GzTriangle* BSPTree::findClosestIntersection(GzRay ray, const std::vector<GzTriangle*>& objects, float& closestDistance) {
+		GzTriangle* closestObject = nullptr;
+		for (const auto& object : objects) {
+			float distance = INFINITY;
+			if (distance < closestDistance) {
+				closestDistance = distance;
+				closestObject = object;
+			}
+		}
+		return closestObject;
+	}
+};
+
 int GzRender::GzPutAttribute(int numAttributes, GzToken* nameList, GzPointer* valueList) {
 	for (int i = 0; i < numAttributes; i++) {
 		switch (nameList[i]) {
@@ -1004,34 +1142,74 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 {
 	index = -1;
 	float t_min = 1000000;
-	for (int i = 0; i < numTriangles; i++)
-	{
-		GzVector3D currIntersectPos;
-		float t = -1;
-		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos,t))
+	if(!bspMode){
+		for (int i = 0; i < numTriangles; i++)
 		{
-			// If intersects, check if other triangle has collided with the light yet
-			if (index == -1)
+			GzVector3D currIntersectPos;
+			float t = -1;
+			if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos,t))
 			{
-				// Light not collide with other triangles yet
-				index = i;
-				firstIntersectPos = currIntersectPos;
-				t_min = t;
-			}
-			else
-			{
-				// Light collided with other triangles before, check intersection position
-				// The closet position to start point will be the first intersection
+				// If intersects, check if other triangle has collided with the light yet
+				if (index == -1)
+				{
+					// Light not collide with other triangles yet
+					index = i;
+					firstIntersectPos = currIntersectPos;
+					t_min = t;
+				}
+				else
+				{
+					// Light collided with other triangles before, check intersection position
+					// The closet position to start point will be the first intersection
 
 				
 
-				if ((t < t_min))
-				{
-					index = i;
-					t_min = t;
-					firstIntersectPos = currIntersectPos;
+					if ((t < t_min))
+					{
+						index = i;
+						t_min = t;
+						firstIntersectPos = currIntersectPos;
+					}
 				}
 			}
+		}
+	}
+	else
+	{
+		BSPTree bspTree;
+
+		for (int i = 0; i < numTriangles; i++)
+		{
+			GzVector3D currIntersectPos;
+			float t = -1;
+
+			float BSPDistance = INFINITY;
+			GzTriangle* BSPTriangle = bspTree.traverse(light, bspTree.root, BSPDistance, 0);
+
+			if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos, t))
+			{
+				// If intersects, check if other triangle has collided with the light yet
+				if (index == -1)
+				{
+					// Light not collide with other triangles yet
+					index = i;
+					firstIntersectPos = currIntersectPos;
+					t_min = t;
+				}
+				else
+				{
+					// Light collided with other triangles before, check intersection position
+					// The closest position to start point will be the first intersection
+					if (t < t_min)
+					{
+						index = i;
+						t_min = t;
+						firstIntersectPos = currIntersectPos;
+					}
+				}
+			}
+			std::vector<GzTriangle*> BSPObjects;
+			BSPNode* BSPNode = bspTree.buildTree(BSPObjects);
 		}
 	}
 	// If index is valid return true
