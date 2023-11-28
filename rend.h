@@ -87,11 +87,11 @@ public:
 	int GzScaleMat(GzCoord scale, GzMatrix mat);
 
 	void RayTrace();
-	GzVector3D PhongModel(GzRay ray, GzVertex intersection, GzRay light, int triangleIndex, int depth);
-	GzVector3D BSDFModel(GzRay ray, GzVertex intersection, GzRay light, int triangleIndex, int depth);
+	GzVector3D PhongModel(GzRay ray, GzVertex intersection, GzRay light, int triangleIndex, int depth, int reflected_depth);
+	GzVector3D BSDFModel(GzRay ray, GzVertex intersection, GzRay light, int triangleIndex, int depth, int reflected_depth);
 
 	GzFresnel FresnelReflection(GzRay light, GzVertex intersection, GzTriangle triangle, int depth);
-	GzVector3D EmitLight(GzRay ray, int depth);
+	GzVector3D EmitLight(GzRay ray, int depth, int reflected_depth);
 	bool GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firstIntersectPos, int currentIndex = -1);
 	bool GzCollisionWithSpecificTriangle(GzRay light, GzTriangle triangle, GzVector3D& intersectPos,float& t_min);
 
