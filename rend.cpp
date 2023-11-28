@@ -892,7 +892,7 @@ GzVector3D ClampVector(GzVector3D vec) {
 }
 GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
 {
-	int maxDepth = 4;
+	int maxDepth =8;
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
 	if (depth >= maxDepth)
 	{
@@ -914,7 +914,7 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	// Initialize color with ambient light
 	GzVector3D ambient = GzVector3D(Ka) & lightSource.color;
 
-	return ClampVector( ambient + PhongModel(ray, intersection_vertex, lightSource, index, depth));
+	return ClampVector(ambient+ BSDFModel(ray, intersection_vertex, lightSource, index, depth));
 }
 
 double clamp(double value, double low, double high)
@@ -966,12 +966,7 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	float PowReflection = pow(clamp(viewerDotReflection, 0.0, 1.0), 2);
 	GzVector3D specular = lightSource.color * PowReflection;
 
-	//GzFresnel fr = FresnelReflection(ray, intersection, triangles[triangleIndex], depth);
-	//GzVector3D reflect = fr.reflection_color * fr.reflect_ratio;
-	//
-	//GzVector3D refract = fr.refraction_color * (1 - fr.reflect_ratio);
 
-	// If the object is in shadow, set the diffuse and specular part to 0
 	GzVector3D firstIntersectPos;
 	int index;
 
@@ -982,26 +977,114 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 		specular = GzVector3D(0, 0, 0);
 	}
 
-	//std::string info = std::to_string(GzCollisionWithTriangle(lightSource, index, firstIntersectPos));
-	//OutputDebugStringA(info.c_str());
-	//OutputDebugStringA("\n");
-	//std::string info1 = std::to_string(diffuse[0]) + " " + std::to_string(diffuse[1]) + " " + std::to_string(diffuse[2]).c_str() + "\n";
-	//OutputDebugStringA(info1.c_str());
-	//std::string info2 = std::to_string(specular[0]) + " " + std::to_string(specular[1]) + " " + std::to_string(specular[2]).c_str() + "\n";
-	//OutputDebugStringA(info2.c_str());
-	//std::string info3 = std::to_string(refract[0]) + " " + std::to_string(refract[1]) + " " + std::to_string(refract[2]).c_str() + "\n";
-	//OutputDebugStringA(info3.c_str());
-	//OutputDebugStringA("\n");
 
-	// Total color is the sum of the ambient, diffuse and specular color
-	//GzVector3D color = diffuse + specular + refract;
-	GzVector3D reflect_dir = (2.0f * (N * L) * N - L).normalized();
-	GzRay reflect_ray = GzRay(obj_pos, reflect_dir); 
-	float reflectance = 0.5;
-	GzVector3D reflect = reflectance * EmitLight(reflect_ray, depth + 1);
-	GzVector3D color = (1.0f - reflectance)*(diffuse + (ks & specular))+ reflect;
-
+	GzRay reflect_ray = GzRay(obj_pos, R); 
+	float reflectance = 0.2;
+	GzVector3D reflectColor = EmitLight(reflect_ray, depth + 1);
+	
+	// Refraction Effect
+	float refractionIndex = 1.5;
+	float cosi = clamp( dotProductNormLight, -1, 1);
+	float etai = 1, etat = refractionIndex;
+	GzVector3D n = N;
+	if (cosi < 0) {
+		cosi = -cosi;
+	}
+	else {
+		std::swap(etai, etat);
+		n.arr[0] = -N.arr[0];
+		n.arr[1] = -N.arr[1];
+		n.arr[2] = -N.arr[2];
+	}
+	float eta = etai / etat;
+	float k = 1 - eta * eta * (1 - cosi * cosi);
+	GzVector3D refractRayDirection = k < 0 ? GzVector3D(0, 0, 0) : eta * L + (eta * cosi - sqrtf(k)) * n;
+	GzRay refractRay = GzRay(obj_pos, refractRayDirection.normalized());
+	float transmittance = 1.0 - reflectance; 
+	GzVector3D refractColor = EmitLight(refractRay, depth + 1);
+	GzVector3D color = (1.0f - reflectance) * (refractColor) + reflectance * (reflectColor + diffuse + (ks & specular)) ;
 	return color;
+}
+float FresnelApproximation(float cosTheta, float reflectionIndex) {
+	float r0 = (1 - reflectionIndex) / (1 + reflectionIndex);
+	r0 = r0 * r0;
+	return r0 + (1 - r0) * pow(1 - cosTheta, 5);
+}
+
+GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSource, int triangleIndex, int depth) {
+	// Acquire light position, object position and viewpoint position.
+	GzVector3D light_pos = lightSource.startPoint;
+	GzVector3D obj_pos = GzVector3D(intersection.position);
+	GzVector3D obj_norm = GzVector3D(intersection.normal);
+	GzVector3D view_pos = ray.startPoint;
+
+	// The vector from the surface to light source (normalized) and the vector from the surface to viewer (normalized)
+	GzVector3D light_vec = (light_pos - obj_pos).normalized();
+	GzVector3D view_vec = (view_pos - obj_pos).normalized();
+
+	// Calculate L (light direction), N (normal), R (reflected light direction), and View (view direction)
+	GzVector3D L = light_vec.normalized();
+	GzVector3D N = obj_norm.normalized();
+
+	//GzVector3D View = (obj_pos-GzVector3D(ray.startPoint) ).normalized();
+	float dotProductNormLight = N * light_vec;
+	float dotProductNormView = N * view_vec;
+	//if (dotProductNormLight < 0 && dotProductNormView < 0) {
+	//	// flip normal vector if dot product under zero
+	//	N[0] = -N[0];
+	//	N[1] = -N[1];
+	//	N[2] = -N[2];
+	//	dotProductNormLight = -dotProductNormLight;
+	//	dotProductNormView = -dotProductNormView;
+	//}
+	GzVector3D R = (2.0 * (N * L) * N - L).normalized();
+
+	// Compute local color
+	GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);
+	GzVector3D kd = triangleColor;
+	GzVector3D ks = triangleColor;
+
+
+
+	// Compute the diffuse part
+	GzVector3D diffuse = kd & lightSource.color * dotProductNormLight;
+	// Compute specular part
+	float viewerDotReflection = R * view_vec;
+	float PowReflection = pow(clamp(viewerDotReflection, 0.0, 1.0), 32);
+	GzVector3D specular = lightSource.color * PowReflection;
+
+
+	GzVector3D firstIntersectPos;
+	int index;
+	GzRay shadowLight = GzRay(obj_pos, light_vec);
+	if (GzCollisionWithTriangle(shadowLight, index, firstIntersectPos, triangleIndex))
+	{
+		diffuse = GzVector3D(0, 0, 0);
+		specular = GzVector3D(0, 0, 0);
+		
+	}
+	GzRay reflect_ray = GzRay(obj_pos, R);
+	float refractionIndex =triangles[triangleIndex].v[0].refract_index;
+	float cos_theta_i = (N * ray.direction);
+	if (cos_theta_i < 0) {
+		cos_theta_i = -cos_theta_i;
+		N[0] = -N[0];
+		N[1] = -N[1];
+		N[2] = -N[2];
+		refractionIndex = 1 / refractionIndex;
+	}
+	float total_inner_reflection = 1.0 - refractionIndex * refractionIndex * (1.0 - cos_theta_i * cos_theta_i);
+	float fresnel = FresnelApproximation(-cos_theta_i, refractionIndex); // Fresnel approximation
+	GzVector3D reflection_color = fresnel * EmitLight(reflect_ray, depth + 1);
+	if (total_inner_reflection < 0) {
+		return diffuse + specular+reflection_color;
+	}
+	// Refraction Effect
+	GzVector3D refracted_dir = refractionIndex * ray.direction + (refractionIndex * cos_theta_i - sqrt(total_inner_reflection)) * N;
+	GzRay refracted_ray(obj_pos, refracted_dir, ray.color);
+	
+	GzVector3D refracted_color = (1.0f - fresnel) * EmitLight(refracted_ray, depth + 1);
+	return diffuse + specular + reflection_color + refracted_color;
 }
 
 /**

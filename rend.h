@@ -88,7 +88,7 @@ public:
 
 	void RayTrace();
 	GzVector3D PhongModel(GzRay ray, GzVertex intersection, GzRay light, int triangleIndex, int depth);
-
+	GzVector3D BSDFModel(GzRay ray, GzVertex intersection, GzRay light, int triangleIndex, int depth);
 
 	GzFresnel FresnelReflection(GzRay light, GzVertex intersection, GzTriangle triangle, int depth);
 	GzVector3D EmitLight(GzRay ray, int depth);
