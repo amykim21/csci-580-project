@@ -892,7 +892,7 @@ GzVector3D ClampVector(GzVector3D vec) {
 }
 GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
 {
-	int maxDepth =8;
+	int maxDepth =5;
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
 	if (depth >= maxDepth)
 	{
@@ -1044,10 +1044,17 @@ GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSour
 	GzVector3D kd = triangleColor;
 	GzVector3D ks = triangleColor;
 
-
+	if (dotProductNormLight < 0 && dotProductNormView < 0) {
+		// flip normal vector if dot product under zero
+		N[0] = -N[0];
+		N[1] = -N[1];
+		N[2] = -N[2];
+		dotProductNormLight = -dotProductNormLight;
+		dotProductNormView = -dotProductNormView;
+	}
 
 	// Compute the diffuse part
-	GzVector3D diffuse = kd & lightSource.color * dotProductNormLight;
+	GzVector3D diffuse = kd & lightSource.color * clamp(dotProductNormLight, 0.0, 1.0);
 	// Compute specular part
 	float viewerDotReflection = R * view_vec;
 	float PowReflection = pow(clamp(viewerDotReflection, 0.0, 1.0), 32);
@@ -1064,27 +1071,25 @@ GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSour
 		
 	}
 	GzRay reflect_ray = GzRay(obj_pos, R);
+
+
 	float refractionIndex =triangles[triangleIndex].v[0].refract_index;
-	float cos_theta_i = (N * ray.direction);
-	if (cos_theta_i < 0) {
-		cos_theta_i = -cos_theta_i;
-		N[0] = -N[0];
-		N[1] = -N[1];
-		N[2] = -N[2];
-		refractionIndex = 1 / refractionIndex;
-	}
+	float cos_theta_i = -(N * ray.direction);
+	float fresnel = FresnelApproximation(cos_theta_i, refractionIndex); // Fresnel approximation
+	GzVector3D localColor = fresnel * (diffuse + specular);
 	float total_inner_reflection = 1.0 - refractionIndex * refractionIndex * (1.0 - cos_theta_i * cos_theta_i);
-	float fresnel = FresnelApproximation(-cos_theta_i, refractionIndex); // Fresnel approximation
-	GzVector3D reflection_color = fresnel * EmitLight(reflect_ray, depth + 1);
-	if (total_inner_reflection < 0) {
-		return diffuse + specular+reflection_color;
-	}
-	// Refraction Effect
-	GzVector3D refracted_dir = refractionIndex * ray.direction + (refractionIndex * cos_theta_i - sqrt(total_inner_reflection)) * N;
-	GzRay refracted_ray(obj_pos, refracted_dir, ray.color);
 	
-	GzVector3D refracted_color = (1.0f - fresnel) * EmitLight(refracted_ray, depth + 1);
-	return diffuse + specular + reflection_color + refracted_color;
+	GzVector3D reflection_color = fresnel * EmitLight(reflect_ray, depth + 1);
+
+	// Refraction Effect
+	//GzVector3D refracted_dir = refractionIndex * ray.direction + (refractionIndex * cos_theta_i - sqrt(total_inner_reflection)) * N;
+	//GzRay refracted_ray(obj_pos, refracted_dir, ray.color);
+	//
+	GzVector3D refracted_color = (1.0f - fresnel) * EmitLight(GzRay(obj_pos, ray.direction), depth + 1);
+	if (total_inner_reflection < 0) {
+		refracted_color = GzVector3D(0, 0, 0);
+	}
+	return pow(0.25,depth-1)*(localColor + reflection_color + refracted_color);
 }
 
 /**
