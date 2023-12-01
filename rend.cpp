@@ -1,4 +1,4 @@
-rend.cpp
+
 /* CS580 Homework 4 */
 
 #include	"stdafx.h"
@@ -20,7 +20,87 @@ rend.cpp
 #define DEG2RAD(degree) ((degree) * (PI / 180.0))
 typedef std::vector<float> VectorCoord;
 typedef std::vector<std::vector<float>> VectorMatrix;
-int bspMode = 0; // toggle bsp tree on and off, 0 is off, 1 is on
+
+/**
+class BSPTree {
+public:
+	BSPNode* root;
+
+	BSPTree() : root(nullptr) {}
+
+	~BSPTree() {
+		delete root;
+	}
+
+	// Recursively build the BSP tree from a list of objects
+	BSPNode* buildTree(const std::vector<Object*>& objects, int depth = 0) {
+		if (objects.empty() || depth > MAX_DEPTH) {
+			return nullptr;
+		}
+
+		BSPNode* node = new BSPNode();
+
+		Plane partitionPlane = choosePartitionPlane(objects);
+		std::vector<Object*> frontObjects;
+		std::vector<Object*> backObjects;
+		partitionObjects(objects, partitionPlane, frontObjects, backObjects);
+
+		node->partitionPlane = partitionPlane;
+		node->front = buildTree(frontObjects, depth + 1);
+		node->back = buildTree(backObjects, depth + 1);
+
+		// If this is a leaf node, assign the objects to this node
+		if (node->isLeaf()) {
+			node->objects = objects;
+		}
+
+		return node;
+	}
+
+	// Traverse the BSP tree with a ray to find the closest intersection
+	Object* traverse(Ray& ray, BSPNode* node, float& closestDistance) {
+		if (!node || node->isLeaf()) {
+			return findClosestIntersection(ray, node->objects, closestDistance);
+		}
+
+		// Determine the order to traverse front and back child based on the ray direction
+		bool frontFirst = ray.direction.dot(node->partitionPlane.normal) < 0;
+		BSPNode* firstChild = frontFirst ? node->front : node->back;
+		BSPNode* secondChild = frontFirst ? node->back : node->front;
+
+		// Traverse the first child
+		Object* closestObject = traverse(ray, firstChild, closestDistance);
+
+		// If the closest intersection is further than the partition plane, also check the second child
+		if (closestDistance > node->partitionPlane.distance(ray.origin)) {
+			Object* secondClosestObject = traverse(ray, secondChild, closestDistance);
+			if (secondClosestObject) {
+				closestObject = secondClosestObject;
+			}
+		}
+
+		return closestObject;
+	}
+
+private:
+	// A function to choose the best partition plane based on a heuristic
+	Plane choosePartitionPlane(const std::vector<Object*>& objects) {
+		// Implement heuristic here
+	}
+
+	// A function to partition objects into front and back lists based on a plane
+	void partitionObjects(const std::vector<Object*>& objects, const Plane& plane,
+						  std::vector<Object*>& frontObjects, std::vector<Object*>& backObjects) {
+		// Implement partitioning logic here
+	}
+
+	// A function to find the closest intersection within a list of objects
+	Object* findClosestIntersection(Ray& ray, const std::vector<Object*>& objects, float& closestDistance) {
+		// Implement intersection logic here
+	}
+};
+*/
+
 /*
 BSPTree bspTree;
 bspTree.root = bspTree.buildTree(sceneObjects);
@@ -230,10 +310,6 @@ VectorCoord normalize(GzCoord v) {
 }
 
 float dot(VectorCoord v1, VectorCoord v2) {
-	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
-}
-
-float dot(GzVector3D v1, GzVector3D v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
 }
 
@@ -704,7 +780,12 @@ bool GzRender::isInShadow(GzVertex intersection, GzLight light) {
 	return false;
 }
 */
-
+GzVector3D ClampVector(GzVector3D vec) {
+	for (int i = 0; i < 3; ++i) {
+		vec.arr[i] = max(0.0f, min(1.0f, vec.arr[i]));
+	}
+	return vec;
+}
 void GzRender::RayTrace() {
 	float d = tan((m_camera.FOV / 2) * (PI / 180));
 	float aspect_ratio = 1.0 * xres / yres;
@@ -712,7 +793,7 @@ void GzRender::RayTrace() {
 		for (int j = 0; j < yres; j++) {
 			float x = (2 * (i + 0.5) / xres - 1) * d * aspect_ratio;
 			float y = (1 - 2 * (j + 0.5) / yres) * d;
-			GzVector3D color = EmitLight(GzRay(GzVector3D(0, 0, -1), GzVector3D(x, y, 1)), 1);
+			GzVector3D color = ClampVector(EmitLight(GzRay(GzVector3D(0, 0, -1), GzVector3D(x, y, 1)), 1,1));
 			GzDepth z = 0;
 			GzPut(i, j, ctoi(color[RED]), ctoi(color[GREEN]), ctoi(color[BLUE]), 1, z);
 		}
@@ -721,239 +802,10 @@ void GzRender::RayTrace() {
 	}
 }
 
-class BSPNode {
-public:
-	GzVector3D partitionPlane; // The plane that divides the space at this node
-	BSPNode* front;       // Pointer to the front child node
-	BSPNode* back;        // Pointer to the back child node
-	std::vector<GzTriangle*> objects; // Objects contained in this node (for leaf nodes)
 
-	BSPNode() : front(nullptr), back(nullptr) {}
-
-	~BSPNode() {
-		// Recursively delete child nodes
-		delete front;
-		delete back;
-	}
-
-	bool isLeaf() const {
-		// If there are no children, this is a leaf node
-		return !front && !back;
-	}
-};
-
-class BSPTree {
-
-
-public:
-	BSPNode* root;
-
-	BSPTree() : root(nullptr) {}
-
-	~BSPTree() {
-		delete root;
-	}
-
-	// Recursively build the BSP tree from a list of objects
-	BSPNode* buildTree(const std::vector<GzTriangle*>& objects, int depth = 0) {
-		if (objects.empty() || depth > 20) { // max depth
-			return nullptr;
-		}
-
-		BSPNode* node = new BSPNode();
-
-		GzVector3D partitionPlane = choosePartitionPlane(objects, 0);
-		std::vector<GzTriangle*> frontObjects;
-		std::vector<GzTriangle*> backObjects;
-		partitionObjects(objects, partitionPlane, frontObjects, backObjects, 0);
-
-		node->partitionPlane = partitionPlane;
-		node->front = buildTree(frontObjects, depth + 1);
-		node->back = buildTree(backObjects, depth + 1);
-
-		// If this is a leaf node, assign the objects to this node
-		if (node->isLeaf()) {
-			node->objects = objects;
-		}
-
-		return node;
-	}
-
-	// Traverse the BSP tree with a ray to find the closest intersection
-	GzTriangle* traverse(GzRay ray, BSPNode* node, float& closestDistance, int distance) {
-		if (distance > 0) {
-			if (!node || node->isLeaf()) {
-				return findClosestIntersection(ray, node->objects, closestDistance);
-			}
-
-			// Determine the order to traverse front and back child based on the ray direction
-			bool frontFirst;
-			BSPNode* firstChild = frontFirst ? node->front : node->back;
-			BSPNode* secondChild = frontFirst ? node->back : node->front;
-
-			// Traverse the first child
-			GzTriangle* closestObject = traverse(ray, firstChild, closestDistance, 0);
-
-			// If the closest intersection is further than the partition plane, also check the second child
-			if (closestDistance > distance) {
-				GzTriangle* secondClosestObject = traverse(ray, secondChild, closestDistance, 0);
-				if (secondClosestObject) {
-					closestObject = secondClosestObject;
-				}
-			}
-
-			return closestObject;
-		}
-		else {
-			return nullptr;
-		}
-	}
-
-private:
-	GzVector3D BSPTree::choosePartitionPlane(const std::vector<GzTriangle*>& objects, int position) {
-		// Simple heuristic: Use the average position of objects to define the plane
-		int averagePosition;
-		for (const auto& object : objects) {
-			averagePosition += position;
-		}
-
-		// Use the normal of one of the objects as the plane normal
-		// or calculate the normal based on object positions for a more complex heuristic
-		GzVector3D normal; // Assume `getNormal` is a method that returns object's normal
-
-		// Create a plane using the average position and the chosen normal
-		GzVector3D partitionPlane(normal);
-		return partitionPlane;
-	}
-
-
-	void BSPTree::partitionObjects(const std::vector<GzTriangle*>& objects, const GzVector3D plane,
-		std::vector<GzTriangle*>& frontObjects, std::vector<GzTriangle*>& backObjects, int distance) {
-		for (const auto& object : objects) {
-			if (distance > 0) {
-				frontObjects.push_back(object);
-			}
-			else if (distance < 0) {
-				backObjects.push_back(object);
-			}
-			else {
-				// Object intersects the plane; split the object or place it in both lists
-				frontObjects.push_back(object);
-				backObjects.push_back(object);
-			}
-		}
-	}
-
-
-	GzTriangle* BSPTree::findClosestIntersection(GzRay ray, const std::vector<GzTriangle*>& objects, float& closestDistance) {
-		GzTriangle* closestObject = nullptr;
-		for (const auto& object : objects) {
-			float distance = INFINITY;
-			if (distance < closestDistance) {
-				closestDistance = distance;
-				closestObject = object;
-			}
-		}
-		return closestObject;
-	}
-};
-
-/**
- * Given a light and a triangle(need to be intersected beforehand), get its reflective and refractive light
- *
- * @param light The input light(The input direction)
- * @param intersection The intersection point of the light and the triangle
- * @param triangle The input triangle(collision)
- * @param depth Recursive depth
- * @return The total color(from reflect, refract, etc) generated by this Fresnel reflection
- */
-GzFresnel GzRender::FresnelReflection(GzRay light, GzVertex intersection, GzTriangle triangle, int depth)
+GzVector3D GzRender::EmitLight(GzRay ray, int depth,int reflected_depth) 
 {
-	// Equation source: An improved illumination model for shaded display, Sec 2 Improved model
-	// The total light color will be: (ambient color) + kd * (sum of diffuse lights) + ks * (reflect light, also known as specular) + kt * (refract light)
-
-	GzVector3D lightDir = GzVector3D(light.direction).normalized();
-	GzVertex N_vertex = getTriangleNormal(triangle, intersection);	// Compute normal vector at intersection point
-	GzVector3D normal = GzVector3D(N_vertex.normal).normalized();
-	GzVector3D normalLight = (normal * lightDir < 0) ? normal : normal * -1;	// Normal vector from light side
-
-	GzVector3D intersection_pos = GzVector3D(intersection.position);
-	float n_air = 1; // Refractive index of air, 1.0003
-	float n1, n2;	// (Incoming n1), (refracting n2) for the refractive index
-
-	// If dot of normal and normal(light side) are positive, then the light comes from air(same direction)
-	bool from_air = (normal * normalLight > 0);
-	float n;
-	if (from_air)
-	{
-		// Then air will be incoming n1, the material will be refract n2
-		n1 = n_air;
-		n2 = triangle.v[0].refract_index;
-		n = n1 / n2;
-	}
-	else
-	{
-		// Then material will be incoming n, the air will be refract n
-		n1 = triangle.v[0].refract_index;
-		n2 = n_air;
-		n = n1 / n2;
-	}
-
-	/// Reflections and refractions
-	// Get cos & sin of incoming light vector and normal vector
-	float cos_incoming = lightDir * normalLight;
-
-	// Reflect light direction
-	GzVector3D reflectDir = lightDir - normal * 2 * (normal * lightDir);	// Reflect = L - 2(L dot N)N
-
-	float ambientColor = 0.1;
-	float kDiffuse = 0.5;
-	float kSpec = 0.5;
-	float reflectRatio;
-	float refractRatio;
-	GzRay reflectedRay;
-	GzRay refractedRay;
-	GzVector3D reflectedColor;
-	GzVector3D refractedColor;
-	GzVector3D totalColor;
-	float cos2t = 1 - pow(n, 2) * (1 - cos_incoming * cos_incoming);
-	if (cos2t < 0)
-	{
-		// Total reflection
-		reflectRatio = 1;
-		// Compute Rays
-		reflectedRay = GzRay(intersection_pos, reflectDir);
-		// Calculate the color of the reflection
-		reflectedColor = EmitLight(reflectedRay, depth + 1);
-	}
-	else
-	{
-		// Refract light direction
-		GzVector3D refractDir = lightDir * n - n * ((from_air ? 1 : -1) * (cos_incoming * normal + sqrt(cos2t))).normalized();
-		// Schlick’s model
-		float r0 = pow(n1 - n2, 2) / pow(n1 + n2, 2);
-		reflectRatio = r0 + (1 - r0) * pow(1 - (from_air ? cos_incoming * -1 : refractDir * normal), 5);
-		refractRatio = 1 - reflectRatio;
-
-		// Compute Rays
-		reflectedRay = GzRay(intersection_pos, reflectDir);
-		refractedRay = GzRay(intersection_pos, refractDir);
-		reflectedColor = EmitLight(reflectedRay, depth + 1);
-		// Calculate the color of the reflection
-		refractedColor = EmitLight(refractedRay, depth + 1);
-	}
-
-	return GzFresnel(reflectedColor, refractedColor, reflectRatio);
-}
-GzVector3D ClampVector(GzVector3D vec) {
-	for (int i = 0; i < 3; ++i) {
-		vec.arr[i] = max(0.0f, min(1.0f, vec.arr[i]));
-	}
-	return vec;
-}
-GzVector3D GzRender::EmitLight(GzRay ray, int depth) 
-{
-	int maxDepth =5;
+	int maxDepth =6;
 	// If the set maximum recursive depth is reached, no further reflection computation occurs
 	if (depth >= maxDepth)
 	{
@@ -975,7 +827,7 @@ GzVector3D GzRender::EmitLight(GzRay ray, int depth)
 	// Initialize color with ambient light
 	GzVector3D ambient = GzVector3D(Ka) & lightSource.color;
 
-	return ClampVector(ambient+ BSDFModel(ray, intersection_vertex, lightSource, index, depth));
+	return BSDFModel(ray, intersection_vertex, lightSource, index, depth, reflected_depth);
 }
 
 double clamp(double value, double low, double high)
@@ -983,7 +835,7 @@ double clamp(double value, double low, double high)
 	return max(min(value, 1.0), 0.0);
 }
 
-GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSource, int triangleIndex, int depth) {
+GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSource, int triangleIndex, int depth,int reflected_depth) {
 	// Acquire light position, object position and viewpoint position.
 	GzVector3D light_pos = lightSource.startPoint;
 	GzVector3D obj_pos = GzVector3D(intersection.position);
@@ -1025,7 +877,7 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 	// Compute specular part
 	float viewerDotReflection = R * view_vec;
 	float PowReflection = pow(clamp(viewerDotReflection, 0.0, 1.0), 2);
-	GzVector3D specular = lightSource.color * PowReflection;
+	GzVector3D specular = ks & lightSource.color * PowReflection;
 
 
 	GzVector3D firstIntersectPos;
@@ -1037,33 +889,19 @@ GzVector3D GzRender::PhongModel(GzRay ray, GzVertex intersection, GzRay lightSou
 		diffuse = GzVector3D(0, 0, 0);
 		specular = GzVector3D(0, 0, 0);
 	}
-
+	if (dotProductNormLight * dotProductNormView < 0) {
+		diffuse = GzVector3D(0, 0, 0);
+		specular = GzVector3D(0, 0, 0);
+	}
 
 	GzRay reflect_ray = GzRay(obj_pos, R); 
-	float reflectance = 0.2;
-	GzVector3D reflectColor = EmitLight(reflect_ray, depth + 1);
+	float reflectance = 0.5;
+	GzVector3D reflectColor = EmitLight(reflect_ray, depth + 1,reflected_depth+1);
 	
-	// Refraction Effect
-	float refractionIndex = 1.5;
-	float cosi = clamp( dotProductNormLight, -1, 1);
-	float etai = 1, etat = refractionIndex;
-	GzVector3D n = N;
-	if (cosi < 0) {
-		cosi = -cosi;
+	if (reflected_depth > 1) {
+		reflectColor = GzVector3D(0, 0, 0);
 	}
-	else {
-		std::swap(etai, etat);
-		n.arr[0] = -N.arr[0];
-		n.arr[1] = -N.arr[1];
-		n.arr[2] = -N.arr[2];
-	}
-	float eta = etai / etat;
-	float k = 1 - eta * eta * (1 - cosi * cosi);
-	GzVector3D refractRayDirection = k < 0 ? GzVector3D(0, 0, 0) : eta * L + (eta * cosi - sqrtf(k)) * n;
-	GzRay refractRay = GzRay(obj_pos, refractRayDirection.normalized());
-	float transmittance = 1.0 - reflectance; 
-	GzVector3D refractColor = EmitLight(refractRay, depth + 1);
-	GzVector3D color = (1.0f - reflectance) * (refractColor) + reflectance * (reflectColor + diffuse + (ks & specular)) ;
+	GzVector3D color = (1.0f - reflectance) * (reflectColor) + reflectance * ( diffuse +  specular) ;
 	return color;
 }
 float FresnelApproximation(float cosTheta, float reflectionIndex) {
@@ -1072,7 +910,7 @@ float FresnelApproximation(float cosTheta, float reflectionIndex) {
 	return r0 + (1 - r0) * pow(1 - cosTheta, 5);
 }
 
-GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSource, int triangleIndex, int depth) {
+GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSource, int triangleIndex, int depth,int reflected_depth) {
 	// Acquire light position, object position and viewpoint position.
 	GzVector3D light_pos = lightSource.startPoint;
 	GzVector3D obj_pos = GzVector3D(intersection.position);
@@ -1090,21 +928,6 @@ GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSour
 	//GzVector3D View = (obj_pos-GzVector3D(ray.startPoint) ).normalized();
 	float dotProductNormLight = N * light_vec;
 	float dotProductNormView = N * view_vec;
-	//if (dotProductNormLight < 0 && dotProductNormView < 0) {
-	//	// flip normal vector if dot product under zero
-	//	N[0] = -N[0];
-	//	N[1] = -N[1];
-	//	N[2] = -N[2];
-	//	dotProductNormLight = -dotProductNormLight;
-	//	dotProductNormView = -dotProductNormView;
-	//}
-	GzVector3D R = (2.0 * (N * L) * N - L).normalized();
-
-	// Compute local color
-	GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);
-	GzVector3D kd = triangleColor;
-	GzVector3D ks = triangleColor;
-
 	if (dotProductNormLight < 0 && dotProductNormView < 0) {
 		// flip normal vector if dot product under zero
 		N[0] = -N[0];
@@ -1113,6 +936,14 @@ GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSour
 		dotProductNormLight = -dotProductNormLight;
 		dotProductNormView = -dotProductNormView;
 	}
+	GzVector3D R = (2.0 * (N * L) * N - L).normalized();
+
+	// Compute local color
+	GzVector3D triangleColor = GzVector3D(triangles[triangleIndex].v[0].color);
+	GzVector3D kd = triangleColor;
+	GzVector3D ks = triangleColor;
+
+
 
 	// Compute the diffuse part
 	GzVector3D diffuse = kd & lightSource.color * clamp(dotProductNormLight, 0.0, 1.0);
@@ -1125,6 +956,10 @@ GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSour
 	GzVector3D firstIntersectPos;
 	int index;
 	GzRay shadowLight = GzRay(obj_pos, light_vec);
+	if (dotProductNormLight * dotProductNormView < 0) {
+		diffuse = GzVector3D(0, 0, 0);
+		specular = GzVector3D(0, 0, 0);
+	}
 	if (GzCollisionWithTriangle(shadowLight, index, firstIntersectPos, triangleIndex))
 	{
 		diffuse = GzVector3D(0, 0, 0);
@@ -1140,17 +975,20 @@ GzVector3D GzRender::BSDFModel(GzRay ray, GzVertex intersection, GzRay lightSour
 	GzVector3D localColor = fresnel * (diffuse + specular);
 	float total_inner_reflection = 1.0 - refractionIndex * refractionIndex * (1.0 - cos_theta_i * cos_theta_i);
 	
-	GzVector3D reflection_color = fresnel * EmitLight(reflect_ray, depth + 1);
+	GzVector3D reflection_color = fresnel * EmitLight(reflect_ray, depth + 1, reflected_depth+1);
 
 	// Refraction Effect
 	//GzVector3D refracted_dir = refractionIndex * ray.direction + (refractionIndex * cos_theta_i - sqrt(total_inner_reflection)) * N;
 	//GzRay refracted_ray(obj_pos, refracted_dir, ray.color);
 	//
-	GzVector3D refracted_color = (1.0f - fresnel) * EmitLight(GzRay(obj_pos, ray.direction), depth + 1);
+	GzVector3D refracted_color = (1.0f - fresnel) * EmitLight(GzRay(obj_pos, ray.direction), depth + 1,reflected_depth);
 	if (total_inner_reflection < 0) {
 		refracted_color = GzVector3D(0, 0, 0);
 	}
-	return pow(0.25,depth-1)*(localColor + reflection_color + refracted_color);
+	if (reflected_depth >1 ) {
+		reflection_color = GzVector3D(0, 0, 0);
+	}
+	return localColor + reflection_color+ refracted_color;
 }
 
 /**
@@ -1166,74 +1004,34 @@ bool GzRender::GzCollisionWithTriangle(GzRay light, int& index, GzVector3D& firs
 {
 	index = -1;
 	float t_min = 1000000;
-	if(!bspMode){
-		for (int i = 0; i < numTriangles; i++)
+	for (int i = 0; i < numTriangles; i++)
+	{
+		GzVector3D currIntersectPos;
+		float t = -1;
+		if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos,t))
 		{
-			GzVector3D currIntersectPos;
-			float t = -1;
-			if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos,t))
+			// If intersects, check if other triangle has collided with the light yet
+			if (index == -1)
 			{
-				// If intersects, check if other triangle has collided with the light yet
-				if (index == -1)
-				{
-					// Light not collide with other triangles yet
-					index = i;
-					firstIntersectPos = currIntersectPos;
-					t_min = t;
-				}
-				else
-				{
-					// Light collided with other triangles before, check intersection position
-					// The closet position to start point will be the first intersection
+				// Light not collide with other triangles yet
+				index = i;
+				firstIntersectPos = currIntersectPos;
+				t_min = t;
+			}
+			else
+			{
+				// Light collided with other triangles before, check intersection position
+				// The closet position to start point will be the first intersection
 
 				
 
-					if ((t < t_min))
-					{
-						index = i;
-						t_min = t;
-						firstIntersectPos = currIntersectPos;
-					}
-				}
-			}
-		}
-	}
-	else
-	{
-		BSPTree bspTree;
-
-		for (int i = 0; i < numTriangles; i++)
-		{
-			GzVector3D currIntersectPos;
-			float t = -1;
-
-			float BSPDistance = INFINITY;
-			GzTriangle* BSPTriangle = bspTree.traverse(light, bspTree.root, BSPDistance, 0);
-
-			if (GzCollisionWithSpecificTriangle(light, triangles[i], currIntersectPos, t))
-			{
-				// If intersects, check if other triangle has collided with the light yet
-				if (index == -1)
+				if ((t < t_min))
 				{
-					// Light not collide with other triangles yet
 					index = i;
-					firstIntersectPos = currIntersectPos;
 					t_min = t;
-				}
-				else
-				{
-					// Light collided with other triangles before, check intersection position
-					// The closest position to start point will be the first intersection
-					if (t < t_min)
-					{
-						index = i;
-						t_min = t;
-						firstIntersectPos = currIntersectPos;
-					}
+					firstIntersectPos = currIntersectPos;
 				}
 			}
-			std::vector<GzTriangle*> BSPObjects;
-			BSPNode* BSPNode = bspTree.buildTree(BSPObjects);
 		}
 	}
 	// If index is valid return true
